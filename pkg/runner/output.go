@@ -3,7 +3,7 @@ package runner
 import (
 	"fmt"
 	"github.com/logrusorgru/aurora/v4"
-	"github.com/tongchengbin/appfinger/pkg/crawl"
+	"github.com/hexbay/appfinger/pkg/crawl"
 	"strings"
 	"unicode"
 )

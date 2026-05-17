@@ -2,7 +2,7 @@ package rule
 
 import (
 	"github.com/projectdiscovery/gologger"
-	"github.com/tongchengbin/appfinger/pkg/matchers"
+	"github.com/hexbay/appfinger/pkg/matchers"
 	"strconv"
 )
 

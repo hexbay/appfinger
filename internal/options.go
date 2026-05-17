@@ -7,7 +7,7 @@ import (
 
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
-	"github.com/tongchengbin/appfinger/pkg/external/customrules"
+	"github.com/hexbay/appfinger/pkg/external/customrules"
 )
 
 type Options struct {
@@ -43,7 +43,7 @@ func ParseOptions() *Options {
 		flagSet.StringVarP(&options.Proxy, "proxy", "x", "", "HTTP proxy to use for requests (e.g. http://127.0.0.1:7890)"),
 		flagSet.BoolVarP(&options.Stdin, "stdin", "s", false, "Read urls from stdin"),
 		flagSet.StringVarP(&options.FingerHome, "finger-home", "d", customrules.GetDefaultDirectory(), "finger yaml directory home default is built-in"),
-		flagSet.BoolVarP(&options.UpdateRule, "update-rule", "ur", false, "update rule from github.com/tongchengbin/appfinger"),
+		flagSet.BoolVarP(&options.UpdateRule, "update-rule", "ur", false, "update rule from github.com/hexbay/appfinger"),
 		flagSet.BoolVarP(&options.DisableIcon, "disable-icon", "di", false, "disabled icon request to matcher"),
 		flagSet.BoolVarP(&options.DisableJavaScript, "disable-js", "dj", false, "disabled matcher javascript rule"),
 		flagSet.BoolVar(&options.DebugResp, "debug-resp", false, "debug response"),

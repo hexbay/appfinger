@@ -1,4 +1,4 @@
-module github.com/tongchengbin/appfinger
+module github.com/hexbay/appfinger
 
 go 1.23
 

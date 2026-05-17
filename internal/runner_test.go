@@ -10,10 +10,10 @@ import (
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/levels"
 	"github.com/stretchr/testify/assert"
-	"github.com/tongchengbin/appfinger/pkg/crawl"
-	"github.com/tongchengbin/appfinger/pkg/external/customrules"
-	"github.com/tongchengbin/appfinger/pkg/matchers"
-	"github.com/tongchengbin/appfinger/pkg/rule"
+	"github.com/hexbay/appfinger/pkg/crawl"
+	"github.com/hexbay/appfinger/pkg/external/customrules"
+	"github.com/hexbay/appfinger/pkg/matchers"
+	"github.com/hexbay/appfinger/pkg/rule"
 )
 
 func TestParseOptions(t *testing.T) {

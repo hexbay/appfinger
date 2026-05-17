@@ -4,7 +4,7 @@
 
 全面的协议指纹规则匹配库，用于应用程序识别。
 
-### 📚 **指纹规则库**: [finger-rules](https://github.com/tongchengbin/finger-rules) - AppFinger 使用的指纹规则库
+### 📚 **指纹规则库**: [finger-rules](https://github.com/hexbay/finger-rules) - AppFinger 使用的指纹规则库
 
 ## ⚙️ 使用方法
 

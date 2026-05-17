@@ -8,11 +8,11 @@ import (
 
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/levels"
-	"github.com/tongchengbin/appfinger/internal"
-	"github.com/tongchengbin/appfinger/pkg/crawl"
-	"github.com/tongchengbin/appfinger/pkg/external/customrules"
-	"github.com/tongchengbin/appfinger/pkg/rule"
-	"github.com/tongchengbin/appfinger/pkg/runner"
+	"github.com/hexbay/appfinger/internal"
+	"github.com/hexbay/appfinger/pkg/crawl"
+	"github.com/hexbay/appfinger/pkg/external/customrules"
+	"github.com/hexbay/appfinger/pkg/rule"
+	"github.com/hexbay/appfinger/pkg/runner"
 )
 
 const Version = "v0.3.4"

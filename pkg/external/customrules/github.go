@@ -10,9 +10,9 @@ import (
 )
 
 var DefaultProvider = &customTemplateGitHubRepo{
-	owner:       "tongchengbin",
+	owner:       "hexbay",
 	repo:        "finger-rules",
-	gitCloneURL: "http://github.com/tongchengbin/finger-rules",
+	gitCloneURL: "http://github.com/hexbay/finger-rules",
 	githubToken: "",
 }
 

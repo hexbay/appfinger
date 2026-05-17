@@ -3,8 +3,8 @@ package runner
 import (
 	"time"
 
-	"github.com/tongchengbin/appfinger/pkg/crawl"
-	"github.com/tongchengbin/appfinger/pkg/rule"
+	"github.com/hexbay/appfinger/pkg/crawl"
+	"github.com/hexbay/appfinger/pkg/rule"
 )
 
 // OptionFunc 定义一个函数类型，用于设置Runner的选项

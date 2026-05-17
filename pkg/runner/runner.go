@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/projectdiscovery/gologger"
-	"github.com/tongchengbin/appfinger/pkg/crawl"
-	"github.com/tongchengbin/appfinger/pkg/rule"
+	"github.com/hexbay/appfinger/pkg/crawl"
+	"github.com/hexbay/appfinger/pkg/rule"
 )
 
 // Result 表示指纹识别结果

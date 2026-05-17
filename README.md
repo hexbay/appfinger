@@ -4,7 +4,7 @@
 
 A comprehensive protocol fingerprint rule matching library for application identification.
 
-### 📚 **Fingerprint Rules Repository**: [finger-rules](https://github.com/tongchengbin/finger-rules) - The rule definitions used by AppFinger
+### 📚 **Fingerprint Rules Repository**: [finger-rules](https://github.com/hexbay/finger-rules) - The rule definitions used by AppFinger
 
 ## ⚙️ Usage
 
