@@ -6,13 +6,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/projectdiscovery/gologger"
-	"github.com/projectdiscovery/gologger/levels"
 	"github.com/hexbay/appfinger/internal"
 	"github.com/hexbay/appfinger/pkg/crawl"
 	"github.com/hexbay/appfinger/pkg/external/customrules"
 	"github.com/hexbay/appfinger/pkg/rule"
 	"github.com/hexbay/appfinger/pkg/runner"
+	"github.com/projectdiscovery/gologger"
+	"github.com/projectdiscovery/gologger/levels"
 )
 
 const Version = "v0.3.4"
@@ -75,6 +75,7 @@ func main() {
 	crawlOptions := crawl.DefaultOption()
 	crawlOptions.DebugReq = options.DebugReq
 	crawlOptions.DebugResp = options.DebugResp
+	crawlOptions.DisableIcon = options.DisableIcon
 	crawlOptions.Timeout = time.Duration(options.Timeout) * time.Second
 	crawlOptions.Proxy = options.Proxy
 	spider := crawl.NewCrawler(crawlOptions)
