@@ -1,50 +1,182 @@
-# 🔍 AppFinger - 全协议指纹规则匹配库
+# AppFinger
 
-*[English](README.md) | 英文*
+*[English](README.md) | [中文](README_CN.md)*
 
-全面的协议指纹规则匹配库，用于应用程序识别。
+AppFinger 是一个快速的 HTTP 应用指纹识别工具，也可以作为 Go 库集成使用。它会采集目标的响应体、响应头、标题、证书、favicon hash、body hash 以及客户端跳转信息，并使用 YAML 指纹规则进行匹配。
 
-### 📚 **指纹规则库**: [finger-rules](https://github.com/hexbay/finger-rules) - AppFinger 使用的指纹规则库
+指纹规则独立维护在 [hexbay/finger-rules](https://github.com/hexbay/finger-rules)。
 
-## ⚙️ 使用方法
+## 功能特性
 
+- HTTP banner 与响应指纹识别
+- 支持响应头、响应体、标题、状态码、证书、favicon hash、body hash 匹配
+- 支持 HTTP 重定向、meta refresh 与轻量 JavaScript 跳转解析
+- 支持多目标并发扫描
+- 支持代理、超时、stdin、文件输入与 JSON 输出
+- WordPress 插件和主题增强识别
+- 支持规则严格校验
+- 既可作为命令行工具使用，也可作为 Go 库调用
+
+## 安装
+
+从源码构建：
+
+```bash
+git clone https://github.com/hexbay/appfinger.git
+cd appfinger
+go build -o appfinger .
 ```
-参数:
-APPFINGER:
--l, -url-file string     包含要扫描的URL的文件
--u, -url string[]        要扫描的目标URL (-u 输入1 -u 输入2)
--t, -threads int         并发线程数 (默认 10)
--timeout int             超时时间（秒）(默认 10)
--x, -proxy string        使用的HTTP代理 (例如 http://127.0.0.1:7890)
--s, -stdin               从标准输入读取URL
--d, -finger-home string  指纹YAML目录主目录（默认为内置）
 
-帮助:
--debug                   启用调试模式
+通过 Go 安装：
 
-输出:
--o, -output string       输出文件路径
+```bash
+go install github.com/hexbay/appfinger@latest
 ```
 
-## 💻 示例
+## 快速开始
 
-```
+扫描单个目标：
+
+```bash
 appfinger -u https://example.com
 ```
 
-## 🔌 工作原理
+扫描多个目标：
 
-AppFinger 通过分析应用程序的独特指纹来扫描网络应用，提供关于所使用技术的有价值见解。
+```bash
+appfinger -u https://example.com -u https://example.org
+```
 
-- 深度检测比较
+从文件读取目标：
+
+```bash
+appfinger -l urls.txt -t 30 -o result.json -output-format json
+```
+
+从标准输入读取目标：
+
+```bash
+cat urls.txt | appfinger -s
+```
+
+使用 HTTP 代理：
+
+```bash
+appfinger -u https://example.com -x http://127.0.0.1:7890
+```
+
+## 命令行参数
+
+```text
+APPFINGER:
+  -u, -url string[]          要扫描的目标 URL（-u INPUT1 -u INPUT2）
+  -l, -url-file string       包含目标 URL 的文件
+  -s, -stdin                 从标准输入读取 URL
+  -t, -threads int           并发线程数（默认 10）
+  -timeout int               超时时间，单位秒（默认 10）
+  -x, -proxy string          HTTP 代理，例如 http://127.0.0.1:7890
+  -d, -finger-home string    指纹 YAML 规则目录
+  -ur, -update-rule          从 finger-rules 仓库更新规则
+  -di, -disable-icon         禁用 favicon 获取和 icon hash 匹配
+  -dj, -disable-js           禁用 JavaScript 跳转解析
+  -debug-req                 输出 HTTP 请求内容
+  -debug-resp                输出 HTTP 响应内容
+  -v, -version               显示版本
+  -validate                  校验规则并退出
+
+OUTPUT:
+  -o, -output string         输出文件路径
+  -output-format string      输出格式：txt 或 json（默认 txt）
+
+HELP:
+  -debug                     启用调试日志
+```
+
+## 指纹规则库
+
+AppFinger 使用 [finger-rules](https://github.com/hexbay/finger-rules) 中的 YAML 指纹规则。
+
+更新本地规则库：
+
+```bash
+appfinger -update-rule
+```
+
+指定自定义规则目录：
+
+```bash
+appfinger -u https://example.com -d /path/to/finger-rules
+```
+
+扫描前校验规则：
+
+```bash
+appfinger -validate -d /path/to/finger-rules
+```
+
+## 作为 Go 库使用
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/hexbay/appfinger/pkg/fetch"
+	"github.com/hexbay/appfinger/pkg/rule"
+	"github.com/hexbay/appfinger/pkg/runner"
+)
+
+func main() {
+	fetcher := fetch.NewFetcher(fetch.DefaultOption())
+
+	manager := rule.NewManager()
+	if err := manager.LoadRules("/path/to/finger-rules"); err != nil {
+		panic(err)
+	}
+
+	r, err := runner.NewRunner(fetcher, manager, &runner.Options{
+		Threads: 10,
+		Timeout: 10,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer r.Close()
+
+	result, err := r.Scan("https://example.com")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%#v\n", result.Components)
+}
+```
+
+## 工作原理
+
+AppFinger 会先请求目标 HTTP 服务，并将响应中的关键信息整理为 banner。随后规则引擎会对响应体、响应头、标题、证书、favicon hash、状态码等字段执行 YAML matcher 匹配。
 
 ![Deep Detection Comparison](docs/img.png)
 
+## 开发
 
-## 👥 贡献
+运行测试：
 
-欢迎通过在GitHub上提出问题或提交拉取请求来为 AppFinger 做出贡献。
+```bash
+go test ./...
+```
 
-## 🔐 License
+本地构建：
 
-AppFinger is licensed under the MIT License. See the LICENSE file for details.
+```bash
+go build ./...
+```
+
+## 贡献
+
+欢迎提交 issue 或 pull request。如果新增或调整指纹识别行为，建议同时补充聚焦的测试用例。
+
+## 许可证
+
+AppFinger 使用 MIT License。详情见 [LICENSE](LICENSE)。

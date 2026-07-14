@@ -1,50 +1,182 @@
-# 🔍 AppFinger
+# AppFinger
 
-*English | [中文](README_CN.md)*
+*[English](README.md) | [中文](README_CN.md)*
 
-A comprehensive protocol fingerprint rule matching library for application identification.
+AppFinger is a fast HTTP application fingerprint scanner and Go library. It fetches web banners, headers, titles, certificates, favicon hashes, and client-side redirects, then matches them against YAML fingerprint rules.
 
-### 📚 **Fingerprint Rules Repository**: [finger-rules](https://github.com/hexbay/finger-rules) - The rule definitions used by AppFinger
+Rules are maintained separately in [hexbay/finger-rules](https://github.com/hexbay/finger-rules).
 
-## ⚙️ Usage
+## Features
 
+- HTTP banner and response fingerprinting
+- Header, body, title, status code, certificate, favicon hash, and body hash matching
+- HTTP redirect, meta refresh, and lightweight JavaScript redirect handling
+- Concurrent target scanning
+- Optional proxy, timeout, stdin, file input, and JSON output
+- WordPress plugin and theme enhancement detection
+- Strict rule validation mode
+- Usable both as a CLI and as a Go library
+
+## Installation
+
+Build from source:
+
+```bash
+git clone https://github.com/hexbay/appfinger.git
+cd appfinger
+go build -o appfinger .
 ```
-Flags:
-APPFINGER:
--l, -url-file string     File containing URLs to scan
--u, -url string[]        Target URL to scan (-u INPUT1 -u INPUT2)
--t, -threads int         Number of concurrent threads (default 10)
--timeout int             Timeout in seconds (default 10)
--x, -proxy string        HTTP proxy to use for requests (e.g. http://127.0.0.1:7890)
--s, -stdin               Read URLs from stdin
--d, -finger-home string  Finger YAML directory home (default is built-in)
 
-HELP:
--debug                   Enable debug mode
+Or install with Go:
 
-OUTPUT:
--o, -output string       File to write output to
+```bash
+go install github.com/hexbay/appfinger@latest
 ```
 
-## 💻 Example
+## Quick Start
 
-```
+Scan one target:
+
+```bash
 appfinger -u https://example.com
 ```
 
-## 🔌 How it Works
+Scan multiple targets:
 
-AppFinger scans web applications by analyzing their unique fingerprints, providing valuable insights into the technologies used.
+```bash
+appfinger -u https://example.com -u https://example.org
+```
 
-- Deep Detection Comparison
+Scan from a file:
+
+```bash
+appfinger -l urls.txt -t 30 -o result.json -output-format json
+```
+
+Scan from stdin:
+
+```bash
+cat urls.txt | appfinger -s
+```
+
+Use an HTTP proxy:
+
+```bash
+appfinger -u https://example.com -x http://127.0.0.1:7890
+```
+
+## CLI Options
+
+```text
+APPFINGER:
+  -u, -url string[]          Target URL to scan (-u INPUT1 -u INPUT2)
+  -l, -url-file string       File containing URLs to scan
+  -s, -stdin                 Read URLs from stdin
+  -t, -threads int           Number of concurrent threads (default 10)
+  -timeout int               Timeout in seconds (default 10)
+  -x, -proxy string          HTTP proxy, e.g. http://127.0.0.1:7890
+  -d, -finger-home string    Fingerprint YAML directory
+  -ur, -update-rule          Update rules from the finger-rules repository
+  -di, -disable-icon         Disable favicon fetching and icon hash matching
+  -dj, -disable-js           Disable JavaScript redirect parsing
+  -debug-req                 Dump HTTP requests
+  -debug-resp                Dump HTTP responses
+  -v, -version               Show version
+  -validate                  Validate rules and exit
+
+OUTPUT:
+  -o, -output string         File to write output to
+  -output-format string      Output format: txt or json (default txt)
+
+HELP:
+  -debug                     Enable debug logs
+```
+
+## Rule Repository
+
+AppFinger uses YAML rules from [finger-rules](https://github.com/hexbay/finger-rules).
+
+Update the local rule repository:
+
+```bash
+appfinger -update-rule
+```
+
+Use a custom rule directory:
+
+```bash
+appfinger -u https://example.com -d /path/to/finger-rules
+```
+
+Validate rules before scanning:
+
+```bash
+appfinger -validate -d /path/to/finger-rules
+```
+
+## Library Usage
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/hexbay/appfinger/pkg/fetch"
+	"github.com/hexbay/appfinger/pkg/rule"
+	"github.com/hexbay/appfinger/pkg/runner"
+)
+
+func main() {
+	fetcher := fetch.NewFetcher(fetch.DefaultOption())
+
+	manager := rule.NewManager()
+	if err := manager.LoadRules("/path/to/finger-rules"); err != nil {
+		panic(err)
+	}
+
+	r, err := runner.NewRunner(fetcher, manager, &runner.Options{
+		Threads: 10,
+		Timeout: 10,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer r.Close()
+
+	result, err := r.Scan("https://example.com")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%#v\n", result.Components)
+}
+```
+
+## How It Works
+
+AppFinger fetches target HTTP responses and normalizes useful matching data into banners. The rule engine then evaluates YAML matchers against response parts such as body, headers, title, certificate, favicon hash, and status code.
 
 ![Deep Detection Comparison](docs/img.png)
-*Figure: Comparison of standard detection vs deep detection*
 
-## 👥 Contributing
+## Development
 
-Feel free to contribute to AppFinger by opening issues or submitting pull requests on GitHub.
+Run tests:
 
-## 🔐 License
+```bash
+go test ./...
+```
 
-AppFinger is licensed under the MIT License. See the LICENSE file for details.
+Build locally:
+
+```bash
+go build ./...
+```
+
+## Contributing
+
+Issues and pull requests are welcome. If you add or modify fingerprint behavior, please include focused tests where possible.
+
+## License
+
+AppFinger is licensed under the MIT License. See [LICENSE](LICENSE) for details.
