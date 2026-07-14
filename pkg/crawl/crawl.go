@@ -63,7 +63,7 @@ RedirectLoop:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			banner, nextURI, err = RequestOnce(c.httpClient, nextURI, c.options.DisableJavaScript)
+			banner, nextURI, err = RequestOnce(c.httpClient, nextURI, c.options.DisableJavaScript, c.options.DebugReq)
 			if err != nil {
 				gologger.Debug().Msgf("Req Error:%v", err)
 				break RedirectLoop

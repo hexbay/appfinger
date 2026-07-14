@@ -216,7 +216,9 @@ func isRedirectStatus(statusCode int) bool {
 	}
 }
 
-func RequestOnce(client *retryablehttp.Client, uri string, disableJavaScript ...bool) (banner *Banner, redirectURL string, err error) {
+func RequestOnce(client *retryablehttp.Client, uri string, flags ...bool) (banner *Banner, redirectURL string, err error) {
+	disableJavaScript := len(flags) > 0 && flags[0]
+	debugReq := len(flags) > 1 && flags[1]
 	// 开始请求数据
 	var resp *http.Response
 	req, err := retryablehttp.NewRequest("GET", uri, nil)
@@ -231,6 +233,11 @@ func RequestOnce(client *retryablehttp.Client, uri string, disableJavaScript ...
 	maxRedirect := 6
 	for i := 0; i < maxRedirect; i++ {
 		var r2 *http.Response
+		if debugReq {
+			if dump, dumpErr := httputil.DumpRequestOut(req.Request, true); dumpErr == nil {
+				fmt.Println("Dump Request For " + req.URL.String() + "\r\n" + string(dump))
+			}
+		}
 		r2, err = client.Do(req)
 		if err != nil {
 			break
@@ -296,7 +303,7 @@ func RequestOnce(client *retryablehttp.Client, uri string, disableJavaScript ...
 		banner.Certificate = parseCertificateInfo(resp.TLS)
 		banner.Cert = resp.TLS
 	}
-	if len(disableJavaScript) == 0 || !disableJavaScript[0] {
+	if !disableJavaScript {
 		//解析JavaScript跳转
 		jsRedirectUri := parseJavaScript(uri, string(body))
 		if jsRedirectUri != "" {
