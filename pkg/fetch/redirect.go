@@ -191,6 +191,13 @@ func ExtractCharset(htmlContent []byte) string {
 }
 
 func parseJavaScript(url string, htmlContent string) string {
+	lowerContent := strings.ToLower(htmlContent)
+	if !strings.Contains(lowerContent, "http-equiv") &&
+		!strings.Contains(lowerContent, "<script") &&
+		!strings.Contains(lowerContent, "onload") &&
+		!strings.Contains(lowerContent, "location") {
+		return ""
+	}
 	// 在这里解析JavaScript，提取跳转信息
 	//<meta http-equiv="Refresh"content="0;url=/yyoa/index.jsp">
 	doc, err := html.Parse(strings.NewReader(htmlContent))

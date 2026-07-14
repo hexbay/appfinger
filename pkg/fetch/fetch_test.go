@@ -55,6 +55,19 @@ func TestRequestOnceCanDisableJavaScriptRedirect(t *testing.T) {
 	assert.Empty(t, redirectURL)
 }
 
+func TestRequestOnceSkipsJavaScriptParsingForPlainHTML(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`<html><title>plain</title><body>hello</body></html>`))
+	}))
+	defer ts.Close()
+
+	banner, redirectURL, err := RequestOnce(NewFetcher(DefaultOption()).GetClient(), ts.URL)
+	assert.NoError(t, err)
+	assert.NotNil(t, banner)
+	assert.Empty(t, redirectURL)
+	assert.Equal(t, "plain", banner.Title)
+}
+
 func TestRequestOnceLimitsBodySize(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(strings.Repeat("a", 128)))
