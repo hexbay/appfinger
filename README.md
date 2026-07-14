@@ -1,23 +1,34 @@
 # AppFinger
 
+<p align="center">
+  <img src="docs/img.png" alt="AppFinger detection overview" width="720">
+</p>
+
+<p align="center">
+  <img alt="Go" src="https://img.shields.io/badge/Go-1.23-00ADD8?logo=go&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green.svg">
+  <img alt="Rules" src="https://img.shields.io/badge/rules-finger--rules-blueviolet">
+  <img alt="Mode" src="https://img.shields.io/badge/CLI%20%2B%20Library-ready-orange">
+</p>
+
 *[English](README.md) | [中文](README_CN.md)*
 
 AppFinger is a fast HTTP application fingerprint scanner and Go library. It fetches web banners, headers, titles, certificates, favicon hashes, and client-side redirects, then matches them against YAML fingerprint rules.
 
 Rules are maintained separately in [hexbay/finger-rules](https://github.com/hexbay/finger-rules).
 
-## Features
+## ✨ Features
 
-- HTTP banner and response fingerprinting
-- Header, body, title, status code, certificate, favicon hash, and body hash matching
-- HTTP redirect, meta refresh, and lightweight JavaScript redirect handling
-- Concurrent target scanning
-- Optional proxy, timeout, stdin, file input, and JSON output
-- WordPress plugin and theme enhancement detection
-- Strict rule validation mode
-- Usable both as a CLI and as a Go library
+- 🌐 HTTP banner and response fingerprinting
+- 🎯 Header, body, title, status code, certificate, favicon hash, and body hash matching
+- 🔁 HTTP redirect, meta refresh, and lightweight JavaScript redirect handling
+- ⚡ Concurrent target scanning
+- 🧰 Optional proxy, timeout, stdin, file input, and JSON output
+- 🧱 WordPress plugin and theme enhancement detection
+- ✅ Strict rule validation mode
+- 🧪 Usable both as a CLI and as a Go library
 
-## Installation
+## 📦 Installation
 
 Build from source:
 
@@ -33,7 +44,7 @@ Or install with Go:
 go install github.com/hexbay/appfinger@latest
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 Scan one target:
 
@@ -65,7 +76,7 @@ Use an HTTP proxy:
 appfinger -u https://example.com -x http://127.0.0.1:7890
 ```
 
-## CLI Options
+## ⚙️ CLI Options
 
 ```text
 APPFINGER:
@@ -92,7 +103,7 @@ HELP:
   -debug                     Enable debug logs
 ```
 
-## Rule Repository
+## 🧩 Rule Repository
 
 AppFinger uses YAML rules from [finger-rules](https://github.com/hexbay/finger-rules).
 
@@ -114,7 +125,7 @@ Validate rules before scanning:
 appfinger -validate -d /path/to/finger-rules
 ```
 
-## Library Usage
+## 🛠️ Library Usage
 
 ```go
 package main
@@ -153,13 +164,13 @@ func main() {
 }
 ```
 
-## How It Works
+## 🔎 How It Works
 
 AppFinger fetches target HTTP responses and normalizes useful matching data into banners. The rule engine then evaluates YAML matchers against response parts such as body, headers, title, certificate, favicon hash, and status code.
 
 ![Deep Detection Comparison](docs/img.png)
 
-## Development
+## 🧪 Development
 
 Run tests:
 
@@ -173,10 +184,10 @@ Build locally:
 go build ./...
 ```
 
-## Contributing
+## 🤝 Contributing
 
 Issues and pull requests are welcome. If you add or modify fingerprint behavior, please include focused tests where possible.
 
-## License
+## 📄 License
 
 AppFinger is licensed under the MIT License. See [LICENSE](LICENSE) for details.

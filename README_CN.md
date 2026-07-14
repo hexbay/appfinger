@@ -1,23 +1,34 @@
 # AppFinger
 
+<p align="center">
+  <img src="docs/img.png" alt="AppFinger detection overview" width="720">
+</p>
+
+<p align="center">
+  <img alt="Go" src="https://img.shields.io/badge/Go-1.23-00ADD8?logo=go&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green.svg">
+  <img alt="Rules" src="https://img.shields.io/badge/rules-finger--rules-blueviolet">
+  <img alt="Mode" src="https://img.shields.io/badge/CLI%20%2B%20Library-ready-orange">
+</p>
+
 *[English](README.md) | [中文](README_CN.md)*
 
 AppFinger 是一个快速的 HTTP 应用指纹识别工具，也可以作为 Go 库集成使用。它会采集目标的响应体、响应头、标题、证书、favicon hash、body hash 以及客户端跳转信息，并使用 YAML 指纹规则进行匹配。
 
 指纹规则独立维护在 [hexbay/finger-rules](https://github.com/hexbay/finger-rules)。
 
-## 功能特性
+## ✨ 功能特性
 
-- HTTP banner 与响应指纹识别
-- 支持响应头、响应体、标题、状态码、证书、favicon hash、body hash 匹配
-- 支持 HTTP 重定向、meta refresh 与轻量 JavaScript 跳转解析
-- 支持多目标并发扫描
-- 支持代理、超时、stdin、文件输入与 JSON 输出
-- WordPress 插件和主题增强识别
-- 支持规则严格校验
-- 既可作为命令行工具使用，也可作为 Go 库调用
+- 🌐 HTTP banner 与响应指纹识别
+- 🎯 支持响应头、响应体、标题、状态码、证书、favicon hash、body hash 匹配
+- 🔁 支持 HTTP 重定向、meta refresh 与轻量 JavaScript 跳转解析
+- ⚡ 支持多目标并发扫描
+- 🧰 支持代理、超时、stdin、文件输入与 JSON 输出
+- 🧱 WordPress 插件和主题增强识别
+- ✅ 支持规则严格校验
+- 🧪 既可作为命令行工具使用，也可作为 Go 库调用
 
-## 安装
+## 📦 安装
 
 从源码构建：
 
@@ -33,7 +44,7 @@ go build -o appfinger .
 go install github.com/hexbay/appfinger@latest
 ```
 
-## 快速开始
+## 🚀 快速开始
 
 扫描单个目标：
 
@@ -65,7 +76,7 @@ cat urls.txt | appfinger -s
 appfinger -u https://example.com -x http://127.0.0.1:7890
 ```
 
-## 命令行参数
+## ⚙️ 命令行参数
 
 ```text
 APPFINGER:
@@ -92,7 +103,7 @@ HELP:
   -debug                     启用调试日志
 ```
 
-## 指纹规则库
+## 🧩 指纹规则库
 
 AppFinger 使用 [finger-rules](https://github.com/hexbay/finger-rules) 中的 YAML 指纹规则。
 
@@ -114,7 +125,7 @@ appfinger -u https://example.com -d /path/to/finger-rules
 appfinger -validate -d /path/to/finger-rules
 ```
 
-## 作为 Go 库使用
+## 🛠️ 作为 Go 库使用
 
 ```go
 package main
@@ -153,13 +164,13 @@ func main() {
 }
 ```
 
-## 工作原理
+## 🔎 工作原理
 
 AppFinger 会先请求目标 HTTP 服务，并将响应中的关键信息整理为 banner。随后规则引擎会对响应体、响应头、标题、证书、favicon hash、状态码等字段执行 YAML matcher 匹配。
 
 ![Deep Detection Comparison](docs/img.png)
 
-## 开发
+## 🧪 开发
 
 运行测试：
 
@@ -173,10 +184,10 @@ go test ./...
 go build ./...
 ```
 
-## 贡献
+## 🤝 贡献
 
 欢迎提交 issue 或 pull request。如果新增或调整指纹识别行为，建议同时补充聚焦的测试用例。
 
-## 许可证
+## 📄 许可证
 
 AppFinger 使用 MIT License。详情见 [LICENSE](LICENSE)。
