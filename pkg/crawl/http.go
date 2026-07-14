@@ -207,6 +207,15 @@ func getHttpHostname(uri string) string {
 	return u.Hostname()
 }
 
+func isRedirectStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect:
+		return true
+	default:
+		return false
+	}
+}
+
 func RequestOnce(client *retryablehttp.Client, uri string) (banner *Banner, redirectURL string, err error) {
 	// 开始请求数据
 	var resp *http.Response
@@ -227,20 +236,23 @@ func RequestOnce(client *retryablehttp.Client, uri string) (banner *Banner, redi
 			break
 		}
 		resp = r2
-		if resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusFound {
+		if isRedirectStatus(resp.StatusCode) {
 			location := resp.Header.Get("Location")
-			if location != "" {
-				var newURL *url.URL
-				newURL, err = url.Parse(location)
-				if err != nil {
-					break
-				}
-				// 如果 location 是相对路径，将其转换为绝对路径
-				if !newURL.IsAbs() {
-					newURL = resp.Request.URL.ResolveReference(newURL)
-				}
-				req, _ = retryablehttp.NewRequest("GET", newURL.String(), nil)
+			if location == "" {
+				break
 			}
+			var newURL *url.URL
+			newURL, err = url.Parse(location)
+			if err != nil {
+				break
+			}
+			// 如果 location 是相对路径，将其转换为绝对路径
+			if !newURL.IsAbs() {
+				newURL = resp.Request.URL.ResolveReference(newURL)
+			}
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+			req, _ = retryablehttp.NewRequest("GET", newURL.String(), nil)
 			continue
 		} else {
 			break
@@ -252,6 +264,9 @@ func RequestOnce(client *retryablehttp.Client, uri string) (banner *Banner, redi
 	if resp == nil {
 		return nil, redirectURL, errors.New("响应为空")
 	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	// get raw headers
 	headers, _ := httputil.DumpResponse(resp, false)
 	// get body
