@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectdiscovery/gologger"
 	"github.com/hexbay/appfinger/pkg/crawl"
 	"github.com/hexbay/appfinger/pkg/rule"
+	"github.com/projectdiscovery/gologger"
 )
 
 // Result 表示指纹识别结果
@@ -305,7 +305,15 @@ func CreateMatchPartGetter(banner *crawl.Banner) rule.MatchPartGetter {
 	for key, value := range banner.Headers {
 		lowerCache[key] = strings.ToLower(value)
 	}
-	return func(part string, _ bool) string {
+	return func(part string, caseSensitive bool) string {
+		if !caseSensitive {
+			if strings.Contains(part, "headers.") {
+				return lowerCache[part[8:]]
+			}
+			if value, ok := lowerCache[part]; ok {
+				return value
+			}
+		}
 		if strings.Contains(part, "headers.") {
 			return banner.Headers[part[8:]]
 		}

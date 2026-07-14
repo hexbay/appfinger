@@ -1,8 +1,8 @@
 package rule
 
 import (
-	"github.com/projectdiscovery/gologger"
 	"github.com/hexbay/appfinger/pkg/matchers"
+	"github.com/projectdiscovery/gologger"
 	"strconv"
 )
 
@@ -80,7 +80,7 @@ func (r *Rule) Match(getMatchPart MatchPartGetter) (bool, map[string]string) {
 		if matched && !matcher.HasExtra {
 			continue
 		}
-		caseSensitive := !matcher.CaseSensitive
+		caseSensitive := matcher.CaseSensitive
 		switch matcher.GetType() {
 		case matchers.StatusMatcher:
 			code := getMatchPart(matcher.Part, caseSensitive)

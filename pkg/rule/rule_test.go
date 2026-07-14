@@ -2,10 +2,11 @@ package rule
 
 import (
 	"fmt"
-	"github.com/projectdiscovery/gologger"
-	"github.com/projectdiscovery/gologger/levels"
 	"github.com/hexbay/appfinger/pkg/crawl"
 	"github.com/hexbay/appfinger/pkg/external/customrules"
+	"github.com/hexbay/appfinger/pkg/matchers"
+	"github.com/projectdiscovery/gologger"
+	"github.com/projectdiscovery/gologger/levels"
 	"os"
 	"runtime"
 	"strings"
@@ -62,9 +63,37 @@ func CreateMatchPartGetter(banner *crawl.Banner) MatchPartGetter {
 	}
 }
 
+func TestRuleMatchHonorsCaseSensitive(t *testing.T) {
+	r := &Rule{
+		Name: "case-sensitive-rule",
+		Matchers: []*matchers.Matcher{
+			{
+				Type:          matchers.MatcherTypeHolder{MatcherType: matchers.WordsMatcher},
+				Words:         []string{"AppFinger"},
+				CaseSensitive: true,
+			},
+		},
+	}
+	for _, matcher := range r.Matchers {
+		if err := matcher.CompileMatchers(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	matched, _ := r.Match(func(part string, caseSensitive bool) string {
+		if !caseSensitive {
+			return strings.ToLower("appfinger")
+		}
+		return "appfinger"
+	})
+	if matched {
+		t.Fatal("case-sensitive matcher should not match different casing")
+	}
+}
+
 func TestLoadRule(t *testing.T) {
 	rulesDir := customrules.GetDefaultDirectory()
-	
+
 	// Check if rules directory exists, if not, download it
 	if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
 		t.Logf("Rules directory does not exist, downloading...")
@@ -72,7 +101,7 @@ func TestLoadRule(t *testing.T) {
 		// Wait a bit for download to complete
 		time.Sleep(2 * time.Second)
 	}
-	
+
 	finger, err := ScanRuleDirectory(rulesDir)
 	if err != nil {
 		t.Error(err)
@@ -85,14 +114,14 @@ func TestLoadRule(t *testing.T) {
 
 func TestRuleMatchFtp(t *testing.T) {
 	rulesDir := customrules.GetDefaultDirectory()
-	
+
 	// Check if rules directory exists, if not, download it
 	if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
 		t.Logf("Rules directory does not exist, downloading...")
 		customrules.DefaultProvider.Download(nil, rulesDir)
 		time.Sleep(2 * time.Second)
 	}
-	
+
 	finger, err := ScanRuleDirectory(rulesDir)
 	if err != nil {
 		t.Error(err)
@@ -112,14 +141,14 @@ func TestRuleMatchFtp(t *testing.T) {
 func TestRuleMatchCpe(t *testing.T) {
 	gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
 	rulesDir := customrules.GetDefaultDirectory()
-	
+
 	// Check if rules directory exists, if not, download it
 	if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
 		t.Logf("Rules directory does not exist, downloading...")
 		customrules.DefaultProvider.Download(nil, rulesDir)
 		time.Sleep(2 * time.Second)
 	}
-	
+
 	finger, err := ScanRuleDirectory(rulesDir)
 	if err != nil {
 		t.Error(err)
@@ -133,14 +162,14 @@ func BenchmarkMatch(b *testing.B) {
 	// 压力测试
 	runtime.GOMAXPROCS(1)
 	rulesDir := customrules.GetDefaultDirectory()
-	
+
 	// Check if rules directory exists, if not, download it
 	if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
 		b.Logf("Rules directory does not exist, downloading...")
 		customrules.DefaultProvider.Download(nil, rulesDir)
 		time.Sleep(2 * time.Second)
 	}
-	
+
 	finger, err := ScanRuleDirectory(rulesDir)
 	if err != nil {
 		panic(err)
