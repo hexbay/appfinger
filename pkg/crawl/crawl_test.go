@@ -40,3 +40,15 @@ func TestRequestOnceFollowsTemporaryRedirect(t *testing.T) {
 	assert.True(t, strings.HasSuffix(banner.Uri, "/final"))
 	assert.Equal(t, http.StatusOK, banner.StatusCode)
 }
+
+func TestRequestOnceCanDisableJavaScriptRedirect(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`<html><script>window.location.href="/next";</script></html>`))
+	}))
+	defer ts.Close()
+
+	banner, redirectURL, err := RequestOnce(NewCrawler(DefaultOption()).GetClient(), ts.URL, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, banner)
+	assert.Empty(t, redirectURL)
+}

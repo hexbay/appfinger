@@ -76,6 +76,7 @@ func main() {
 	crawlOptions.DebugReq = options.DebugReq
 	crawlOptions.DebugResp = options.DebugResp
 	crawlOptions.DisableIcon = options.DisableIcon
+	crawlOptions.DisableJavaScript = options.DisableJavaScript
 	crawlOptions.Timeout = time.Duration(options.Timeout) * time.Second
 	crawlOptions.Proxy = options.Proxy
 	spider := crawl.NewCrawler(crawlOptions)

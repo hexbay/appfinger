@@ -216,7 +216,7 @@ func isRedirectStatus(statusCode int) bool {
 	}
 }
 
-func RequestOnce(client *retryablehttp.Client, uri string) (banner *Banner, redirectURL string, err error) {
+func RequestOnce(client *retryablehttp.Client, uri string, disableJavaScript ...bool) (banner *Banner, redirectURL string, err error) {
 	// 开始请求数据
 	var resp *http.Response
 	req, err := retryablehttp.NewRequest("GET", uri, nil)
@@ -296,21 +296,22 @@ func RequestOnce(client *retryablehttp.Client, uri string) (banner *Banner, redi
 		banner.Certificate = parseCertificateInfo(resp.TLS)
 		banner.Cert = resp.TLS
 	}
-	//解析JavaScript跳转
-	jsRedirectUri := parseJavaScript(uri, string(body))
-	if jsRedirectUri != "" {
-		if jsRedirectUri[0] == '/' {
-			u, _ := url.Parse(banner.Uri)
-			uri = u.Scheme + "://" + u.Host + jsRedirectUri
-		} else {
-			uri = urlJoin(uri, jsRedirectUri)
-		}
+	if len(disableJavaScript) == 0 || !disableJavaScript[0] {
+		//解析JavaScript跳转
+		jsRedirectUri := parseJavaScript(uri, string(body))
+		if jsRedirectUri != "" {
+			if jsRedirectUri[0] == '/' {
+				u, _ := url.Parse(banner.Uri)
+				uri = u.Scheme + "://" + u.Host + jsRedirectUri
+			} else {
+				uri = urlJoin(uri, jsRedirectUri)
+			}
 
-		gologger.Debug().Msgf("redirect URL:%s", uri)
-		return banner, uri, nil
-	} else {
-		return banner, "", nil
+			gologger.Debug().Msgf("redirect URL:%s", uri)
+			return banner, uri, nil
+		}
 	}
+	return banner, "", nil
 }
 
 func mmh3(data []byte) int32 {
