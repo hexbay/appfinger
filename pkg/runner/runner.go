@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hexbay/appfinger/pkg/detectors/wordpress"
 	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
 	"github.com/projectdiscovery/gologger"
@@ -229,7 +230,7 @@ func (r *Runner) ScanWithContext(ctx context.Context, uri string) (*Result, erro
 	// WordPress插件匹配
 	if _, ok := results["Wordpress"]; ok {
 		// 如果匹配到Wordpress，使用最后一个banner来匹配WordPress插件
-		wpPlugins := MatchWpPlugin(lastBanner.Body)
+		wpPlugins := wordpress.MatchPlugins(lastBanner.Body)
 		results = MergeMaps(wpPlugins, results)
 	}
 	// 最后再匹配插件

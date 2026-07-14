@@ -1,4 +1,4 @@
-package runner
+package wordpress
 
 import (
 	"regexp"
@@ -7,8 +7,8 @@ import (
 // 单独匹配wordpress 插件
 var pluginReg = regexp.MustCompile(`/wp-content/(plugins|themes)/([\w-]+)/(?:.*\?ver=([\d.]+))?`)
 
-// MatchWpPlugin 匹配WordPress插件
-func MatchWpPlugin(body string) map[string]map[string]string {
+// MatchPlugins 匹配WordPress插件和主题。
+func MatchPlugins(body string) map[string]map[string]string {
 	matchedPaths := pluginReg.FindAllStringSubmatch(body, -1)
 	pluginInfo := make(map[string]map[string]string)
 	for _, matches := range matchedPaths {
