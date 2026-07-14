@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hexbay/appfinger/pkg/crawl"
@@ -41,6 +42,7 @@ type Runner struct {
 	options     *Options    // 运行时配置选项
 	outputs     []io.Writer // 输出写入器
 	closers     []io.Closer // 需要关闭的输出资源
+	outputMu    sync.Mutex
 }
 
 // NewRunnerWithOptions 从选项创建Runner实例
@@ -115,6 +117,9 @@ func NewRunner(crawler *crawl.Crawler, ruleManager *rule.Manager, options *Optio
 	// 如果没有设置回调函数，使用默认的控制台输出
 	if options.Callback == nil {
 		options.Callback = func(target string, result *Result) {
+			runner.outputMu.Lock()
+			defer runner.outputMu.Unlock()
+
 			// 如果不是静默模式，则输出到控制台
 			if !options.Silent {
 				out := formatConsole(target, result.Banner, result.Components)
@@ -410,27 +415,62 @@ func (r *Runner) Enumerate() error {
 // enumerateMultipleTargets 扫描多个目标
 func (r *Runner) enumerateMultipleTargets(ctx context.Context, reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
+	threads := r.options.Threads
+	if threads <= 0 {
+		threads = 1
+	}
+
+	jobs := make(chan string)
+	var wg sync.WaitGroup
+	for i := 0; i < threads; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for target := range jobs {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				result, err := r.ScanWithContext(ctx, target)
+				if err != nil {
+					gologger.Warning().Msgf("scan target %s failed: %v", target, err)
+					continue
+				}
+				if r.options.Callback != nil {
+					r.options.Callback(target, result)
+				}
+			}
+		}()
+	}
+
 	for scanner.Scan() {
 		// 检查上下文是否已经被取消
 		select {
 		case <-ctx.Done():
+			close(jobs)
+			wg.Wait()
 			return ctx.Err() // 返回上下文取消的错误
 		default:
 			// 继续执行
 		}
 
-		target := scanner.Text()
-		// 使用传入的上下文调用ScanWithContext方法
-		result, err := r.ScanWithContext(ctx, target)
-		if err != nil {
-			gologger.Warning().Msgf("scan target %s failed: %v", target, err)
+		target := strings.TrimSpace(scanner.Text())
+		if target == "" {
 			continue
 		}
-		// 调用回调函数处理结果
-		if r.options.Callback != nil {
-			r.options.Callback(target, result)
+
+		select {
+		case <-ctx.Done():
+			close(jobs)
+			wg.Wait()
+			return ctx.Err()
+		case jobs <- target:
 		}
 	}
+	close(jobs)
+	wg.Wait()
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("read targets failed: %v", err)
 	}
