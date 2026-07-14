@@ -3,7 +3,7 @@ package runner
 import (
 	"time"
 
-	"github.com/hexbay/appfinger/pkg/crawl"
+	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
 )
 
@@ -12,8 +12,8 @@ type OptionFunc func(*RunnerBuilder)
 
 // RunnerBuilder 用于构建Runner实例的构建器
 type RunnerBuilder struct {
-	options    *Options
-	crawler    *crawl.Crawler
+	options     *Options
+	fetcher     *fetch.Fetcher
 	ruleManager *rule.Manager
 }
 
@@ -24,10 +24,10 @@ func NewBuilder() *RunnerBuilder {
 	}
 }
 
-// WithCrawler 设置自定义爬虫
-func WithCrawler(crawler *crawl.Crawler) OptionFunc {
+// WithFetcher 设置自定义Fetcher。
+func WithFetcher(fetcher *fetch.Fetcher) OptionFunc {
 	return func(rb *RunnerBuilder) {
-		rb.crawler = crawler
+		rb.fetcher = fetcher
 	}
 }
 
@@ -96,13 +96,13 @@ func WithCallback(callback func(target string, result *Result)) OptionFunc {
 
 // Build 构建Runner实例
 func (rb *RunnerBuilder) Build() (*Runner, error) {
-	// 如果没有提供爬虫，创建默认爬虫
-	if rb.crawler == nil {
-		crawlerOptions := crawl.DefaultOption()
+	// 如果没有提供Fetcher，创建默认Fetcher。
+	if rb.fetcher == nil {
+		fetchOptions := fetch.DefaultOption()
 		if rb.options.Timeout > 0 {
-			crawlerOptions.Timeout = time.Duration(rb.options.Timeout) * time.Second
+			fetchOptions.Timeout = time.Duration(rb.options.Timeout) * time.Second
 		}
-		rb.crawler = crawl.NewCrawler(crawlerOptions)
+		rb.fetcher = fetch.NewFetcher(fetchOptions)
 	}
 
 	// 如果没有提供规则管理器，使用默认规则管理器
@@ -118,5 +118,5 @@ func (rb *RunnerBuilder) Build() (*Runner, error) {
 	}
 
 	// 创建Runner实例
-	return NewRunner(rb.crawler, rb.ruleManager, rb.options)
+	return NewRunner(rb.fetcher, rb.ruleManager, rb.options)
 }

@@ -13,20 +13,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hexbay/appfinger/pkg/crawl"
+	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
 	"github.com/projectdiscovery/gologger"
 )
 
 // Result 表示指纹识别结果
 type Result struct {
-	Banner     *crawl.Banner
+	Banner     *fetch.Banner
 	Components map[string]map[string]string
 }
 
 type ExecutorsPlugin struct {
 	Plugin *rule.Plugin
-	Banner *crawl.Banner
+	Banner *fetch.Banner
 }
 
 // OutputFields 输出字段
@@ -35,9 +35,9 @@ type OutputFields struct {
 	Extract map[string]map[string]string `json:"extract,omitempty"`
 }
 
-// Runner 负责协调爬虫和规则匹配的执行流程
+// Runner 负责协调Fetcher和规则匹配的执行流程
 type Runner struct {
-	crawler     *crawl.Crawler
+	fetcher     *fetch.Fetcher
 	ruleManager *rule.Manager
 	options     *Options    // 运行时配置选项
 	outputs     []io.Writer // 输出写入器
@@ -52,11 +52,11 @@ func NewRunnerWithOptions(options *Options) (*Runner, error) {
 		options = &DefaultOptions
 	}
 
-	// 初始化爬虫
-	crawlerOptions := &crawl.Options{
+	// 初始化Fetcher
+	fetchOptions := &fetch.Options{
 		Timeout: time.Duration(options.Timeout) * time.Second,
 	}
-	crawler := crawl.NewCrawler(crawlerOptions)
+	fetcher := fetch.NewFetcher(fetchOptions)
 
 	// 初始化规则管理器
 	var ruleManager *rule.Manager
@@ -72,8 +72,8 @@ func NewRunnerWithOptions(options *Options) (*Runner, error) {
 		ruleManager = rule.GetRuleManager()
 	}
 
-	// 使用初始化后的crawler和ruleManager创建Runner
-	return NewRunner(crawler, ruleManager, options)
+	// 使用初始化后的fetcher和ruleManager创建Runner
+	return NewRunner(fetcher, ruleManager, options)
 }
 
 // New 使用功能选项模式创建Runner实例
@@ -90,15 +90,15 @@ func New(opts ...OptionFunc) (*Runner, error) {
 	return builder.Build()
 }
 
-// NewRunner 从现有的crawler和ruleManager创建Runner实例
-func NewRunner(crawler *crawl.Crawler, ruleManager *rule.Manager, options *Options) (*Runner, error) {
+// NewRunner 从现有的fetcher和ruleManager创建Runner实例
+func NewRunner(fetcher *fetch.Fetcher, ruleManager *rule.Manager, options *Options) (*Runner, error) {
 	// 如果没有提供选项，使用默认选项
 	if options == nil {
 		options = &DefaultOptions
 	}
 	// 初始化Runner
 	runner := &Runner{
-		crawler:     crawler,
+		fetcher:     fetcher,
 		ruleManager: ruleManager,
 		options:     options,
 		outputs:     []io.Writer{},
@@ -170,14 +170,14 @@ func (r *Runner) Close() error {
 }
 
 // NewRunnerCompat 向后兼容的NewRunner函数，用于支持现有代码
-func NewRunnerCompat(crawler *crawl.Crawler, ruleManager *rule.Manager) *Runner {
+func NewRunnerCompat(fetcher *fetch.Fetcher, ruleManager *rule.Manager) *Runner {
 	// 使用默认选项创建Runner
-	runner, err := NewRunner(crawler, ruleManager, nil)
+	runner, err := NewRunner(fetcher, ruleManager, nil)
 	if err != nil {
 		// 在兼容模式下，如果出错，记录日志并返回一个空的Runner
 		gologger.Warning().Msgf("创建Runner失败: %v", err)
 		return &Runner{
-			crawler:     crawler,
+			fetcher:     fetcher,
 			ruleManager: ruleManager,
 			options:     &DefaultOptions,
 			outputs:     []io.Writer{},
@@ -188,15 +188,15 @@ func NewRunnerCompat(crawler *crawl.Crawler, ruleManager *rule.Manager) *Runner 
 }
 
 // NewDefaultRunner 创建默认的Runner实例
-func NewDefaultRunner(options *crawl.Options, finger *rule.Finger) *Runner {
-	crawler := crawl.NewCrawler(options)
+func NewDefaultRunner(options *fetch.Options, finger *rule.Finger) *Runner {
+	fetcher := fetch.NewFetcher(options)
 	var ruleManager *rule.Manager
 	if finger == nil {
 		ruleManager = rule.GetRuleManager()
 	}
 
 	return &Runner{
-		crawler:     crawler,
+		fetcher:     fetcher,
 		ruleManager: ruleManager,
 	}
 }
@@ -209,7 +209,7 @@ func (r *Runner) Scan(uri string) (*Result, error) {
 // ScanWithContext 执行指纹识别流程
 func (r *Runner) ScanWithContext(ctx context.Context, uri string) (*Result, error) {
 	// 获取网站信息
-	banners, err := r.crawler.GetBanners(ctx, uri)
+	banners, err := r.fetcher.GetBanners(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -264,20 +264,20 @@ func urlJoin(baseURL, urlPath string) string {
 }
 
 // ExecuteWithPlugin 使用插件执行额外请求
-func (r *Runner) ExecuteWithPlugin(ctx context.Context, baseURL string, plugin *rule.Plugin) ([]*crawl.Banner, error) {
+func (r *Runner) ExecuteWithPlugin(ctx context.Context, baseURL string, plugin *rule.Plugin) ([]*fetch.Banner, error) {
 	gologger.Debug().Msgf("Execute with Plugin: %s", plugin.Path)
 	newURL := urlJoin(baseURL, plugin.Path)
-	banners, err := r.crawler.GetBanners(ctx, newURL)
+	banners, err := r.fetcher.GetBanners(ctx, newURL)
 	return banners, err
 }
 
 // Match 兼容旧版API的匹配方法
-func (r *Runner) Match(uri string) (banner *crawl.Banner, m map[string]map[string]string, err error) {
+func (r *Runner) Match(uri string) (banner *fetch.Banner, m map[string]map[string]string, err error) {
 	// 使用背景上下文，以便与旧API兼容
 	ctx := context.Background()
 
 	// 执行爬取
-	banner, err = r.crawler.GetBanner(ctx, uri)
+	banner, err = r.fetcher.GetBanner(ctx, uri)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -292,7 +292,7 @@ func (r *Runner) Match(uri string) (banner *crawl.Banner, m map[string]map[strin
 }
 
 // matchBanners 对一组banner进行匹配并返回结果和插件
-func (r *Runner) matchBanners(finger *rule.Finger, banners []*crawl.Banner) (map[string]map[string]string, []ExecutorsPlugin) {
+func (r *Runner) matchBanners(finger *rule.Finger, banners []*fetch.Banner) (map[string]map[string]string, []ExecutorsPlugin) {
 	var plugins = make([]ExecutorsPlugin, 0)
 	var results = make(map[string]map[string]string)
 	// 对每个banner进行匹配
@@ -317,7 +317,7 @@ func (r *Runner) matchBanners(finger *rule.Finger, banners []*crawl.Banner) (map
 }
 
 // CreateMatchPartGetter 创建一个从banner中提取匹配部分的函数
-func CreateMatchPartGetter(banner *crawl.Banner) rule.MatchPartGetter {
+func CreateMatchPartGetter(banner *fetch.Banner) rule.MatchPartGetter {
 	lowerCache := make(map[string]string)
 	lowerCache["body"] = strings.ToLower(banner.Body)
 	lowerCache["header"] = strings.ToLower(banner.Header)

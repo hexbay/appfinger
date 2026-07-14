@@ -1,4 +1,4 @@
-package crawl
+package fetch
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"testing"
 )
 
-func TestCrawl(t *testing.T) {
+func TestFetch(t *testing.T) {
 	gologger.DefaultLogger.SetMaxLevel(levels.LevelInfo)
-	crawl := NewCrawler(DefaultOption())
-	banner, err := crawl.GetBanner(context.Background(), "https://www.hackerone.com")
+	fetcher := NewFetcher(DefaultOption())
+	banner, err := fetcher.GetBanner(context.Background(), "https://www.hackerone.com")
 	assert.NoError(t, err)
 	assert.NotNil(t, banner)
 	assert.Equal(t, banner.StatusCode, 200)
@@ -33,7 +33,7 @@ func TestRequestOnceFollowsTemporaryRedirect(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	banner, redirectURL, err := RequestOnce(NewCrawler(DefaultOption()).GetClient(), ts.URL)
+	banner, redirectURL, err := RequestOnce(NewFetcher(DefaultOption()).GetClient(), ts.URL)
 	assert.NoError(t, err)
 	assert.Empty(t, redirectURL)
 	assert.NotNil(t, banner)
@@ -47,7 +47,7 @@ func TestRequestOnceCanDisableJavaScriptRedirect(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	banner, redirectURL, err := RequestOnce(NewCrawler(DefaultOption()).GetClient(), ts.URL, true)
+	banner, redirectURL, err := RequestOnce(NewFetcher(DefaultOption()).GetClient(), ts.URL, true)
 	assert.NoError(t, err)
 	assert.NotNil(t, banner)
 	assert.Empty(t, redirectURL)

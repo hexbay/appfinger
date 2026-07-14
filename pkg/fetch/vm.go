@@ -1,4 +1,4 @@
-package crawl
+package fetch
 
 import (
 	"fmt"

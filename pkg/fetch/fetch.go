@@ -1,4 +1,4 @@
-package crawl
+package fetch
 
 import (
 	"context"
@@ -11,22 +11,22 @@ import (
 	"sync"
 )
 
-// Crawler 定义爬虫的核心结构
-type Crawler struct {
+// Fetcher 定义HTTP探测和Banner采集的核心结构。
+type Fetcher struct {
 	options      *Options
 	httpClient   *retryablehttp.Client
 	clientInitMu sync.Once
 }
 
-// NewCrawler 创建新的爬虫实例
-func NewCrawler(options *Options) *Crawler {
-	c := &Crawler{options: options}
+// NewFetcher 创建新的Fetcher实例。
+func NewFetcher(options *Options) *Fetcher {
+	c := &Fetcher{options: options}
 	c.initClient()
 	return c
 }
 
 // initClient 初始化HTTP客户端
-func (c *Crawler) initClient() {
+func (c *Fetcher) initClient() {
 	c.clientInitMu.Do(func() {
 		opts := retryablehttp.DefaultOptionsSpraying
 		opts.Timeout = c.options.Timeout
@@ -45,13 +45,13 @@ func (c *Crawler) initClient() {
 }
 
 // GetClient 获取HTTP客户端
-func (c *Crawler) GetClient() *retryablehttp.Client {
+func (c *Fetcher) GetClient() *retryablehttp.Client {
 	c.initClient()
 	return c.httpClient
 }
 
 // GetBanners 实现BannerProvider接口
-func (c *Crawler) GetBanners(ctx context.Context, uri string) ([]*Banner, error) {
+func (c *Fetcher) GetBanners(ctx context.Context, uri string) ([]*Banner, error) {
 	var banners []*Banner
 	var nextURI = uri
 	var banner *Banner
@@ -104,7 +104,7 @@ RedirectLoop:
 	return banners, nil
 }
 
-func (c *Crawler) GetBanner(ctx context.Context, uri string) (*Banner, error) {
+func (c *Fetcher) GetBanner(ctx context.Context, uri string) (*Banner, error) {
 	banners, err := c.GetBanners(ctx, uri)
 	if err != nil {
 		return nil, err

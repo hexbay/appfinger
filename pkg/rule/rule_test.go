@@ -2,8 +2,8 @@ package rule
 
 import (
 	"fmt"
-	"github.com/hexbay/appfinger/pkg/crawl"
 	"github.com/hexbay/appfinger/pkg/external/customrules"
+	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/matchers"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/levels"
@@ -15,7 +15,7 @@ import (
 )
 
 // CreateMatchPartGetter 创建一个从banner中提取匹配部分的函数
-func CreateMatchPartGetter(banner *crawl.Banner) MatchPartGetter {
+func CreateMatchPartGetter(banner *fetch.Banner) MatchPartGetter {
 	lowerCache := make(map[string]string)
 	lowerCache["body"] = strings.ToLower(banner.Body)
 	lowerCache["header"] = strings.ToLower(banner.Header)
@@ -182,7 +182,7 @@ func BenchmarkMatch(b *testing.B) {
 	_ = b.Run("Match Http", func(b *testing.B) {
 		// 准备测试数据
 		b.ResetTimer()
-		banner := &crawl.Banner{
+		banner := &fetch.Banner{
 			Title:  "测试标题",
 			Uri:    "http://127.0.0.1:8080",
 			Header: "HTTP/1.1 500 Internal Server Error\\r\\nTransfer-Encoding: chunked\\r\\nConnection: keep-alive\\r\\nContent-Type: text/html; charset=UTF-8\\r\\nDate: Sun, 24 Aug 2025 11:32:33 GMT\\r\\nServer: nginx\\r\\n\\r\\n",

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/hexbay/appfinger/internal"
-	"github.com/hexbay/appfinger/pkg/crawl"
 	"github.com/hexbay/appfinger/pkg/external/customrules"
+	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
 	"github.com/hexbay/appfinger/pkg/runner"
 	"github.com/projectdiscovery/gologger"
@@ -72,14 +72,14 @@ func main() {
 		gologger.Info().Msgf("Validate success: loaded %d rule categories with %d total rules", len(manager.GetFinger().Rules), totalRules)
 		return
 	}
-	crawlOptions := crawl.DefaultOption()
-	crawlOptions.DebugReq = options.DebugReq
-	crawlOptions.DebugResp = options.DebugResp
-	crawlOptions.DisableIcon = options.DisableIcon
-	crawlOptions.DisableJavaScript = options.DisableJavaScript
-	crawlOptions.Timeout = time.Duration(options.Timeout) * time.Second
-	crawlOptions.Proxy = options.Proxy
-	spider := crawl.NewCrawler(crawlOptions)
+	fetchOptions := fetch.DefaultOption()
+	fetchOptions.DebugReq = options.DebugReq
+	fetchOptions.DebugResp = options.DebugResp
+	fetchOptions.DisableIcon = options.DisableIcon
+	fetchOptions.DisableJavaScript = options.DisableJavaScript
+	fetchOptions.Timeout = time.Duration(options.Timeout) * time.Second
+	fetchOptions.Proxy = options.Proxy
+	fetcherClient := fetch.NewFetcher(fetchOptions)
 	manager := rule.GetRuleManager()
 	err := manager.LoadRules(options.FingerHome)
 	if err != nil {
@@ -112,7 +112,7 @@ func main() {
 		OutputAll: true,
 	}
 
-	appRunner, err := runner.NewRunner(spider, manager, runnerOptions)
+	appRunner, err := runner.NewRunner(fetcherClient, manager, runnerOptions)
 	if err != nil {
 		gologger.Print().Msgf(err.Error())
 		return

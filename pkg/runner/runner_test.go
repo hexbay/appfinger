@@ -7,28 +7,28 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hexbay/appfinger/pkg/external/customrules"
+	"github.com/hexbay/appfinger/pkg/fetch"
+	"github.com/hexbay/appfinger/pkg/rule"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/levels"
 	"github.com/stretchr/testify/assert"
-	"github.com/hexbay/appfinger/pkg/crawl"
-	"github.com/hexbay/appfinger/pkg/external/customrules"
-	"github.com/hexbay/appfinger/pkg/rule"
 )
 
 func TestRunnerSSL(t *testing.T) {
 	gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
-	spider := crawl.NewCrawler(crawl.DefaultOption())
+	fetcherClient := fetch.NewFetcher(fetch.DefaultOption())
 	ruleManager := rule.GetRuleManager()
-	
+
 	rulesDir := customrules.GetDefaultDirectory()
 	// Check if rules directory exists, if not, download it
 	if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
 		t.Logf("Rules directory does not exist, downloading...")
 		customrules.DefaultProvider.Download(nil, rulesDir)
 	}
-	
+
 	_ = ruleManager.LoadRules(rulesDir)
-	runner := NewRunnerCompat(spider, ruleManager)
+	runner := NewRunnerCompat(fetcherClient, ruleManager)
 	result, err := runner.Scan("https://www.hackerone.com")
 	assert.NoError(t, err)
 	if result != nil {
@@ -38,18 +38,18 @@ func TestRunnerSSL(t *testing.T) {
 
 func TestRunnerWordPress(t *testing.T) {
 	gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
-	spider := crawl.NewCrawler(crawl.DefaultOption())
+	fetcherClient := fetch.NewFetcher(fetch.DefaultOption())
 	ruleManager := rule.GetRuleManager()
-	
+
 	rulesDir := customrules.GetDefaultDirectory()
 	// Check if rules directory exists, if not, download it
 	if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
 		t.Logf("Rules directory does not exist, downloading...")
 		customrules.DefaultProvider.Download(nil, rulesDir)
 	}
-	
+
 	_ = ruleManager.LoadRules(rulesDir)
-	runner := NewRunnerCompat(spider, ruleManager)
+	runner := NewRunnerCompat(fetcherClient, ruleManager)
 	result, err := runner.Scan("https://cn.wordpress.org/")
 	assert.NoError(t, err)
 	if result != nil {
@@ -84,20 +84,20 @@ func TestRunnerPlugin(t *testing.T) {
 	defer ts.Close()
 	// 创建规则管理器并设置指纹识别器
 	ruleManager := rule.NewManager()
-	
+
 	rulesDir := customrules.GetDefaultDirectory()
 	// Check if rules directory exists, if not, download it
 	if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
 		t.Logf("Rules directory does not exist, downloading...")
 		customrules.DefaultProvider.Download(nil, rulesDir)
 	}
-	
+
 	err := ruleManager.LoadRules(rulesDir)
 	assert.NoError(t, err)
-	// 创建爬虫
-	spider := crawl.NewCrawler(crawl.DefaultOption())
+	// 创建Fetcher
+	fetcherClient := fetch.NewFetcher(fetch.DefaultOption())
 	// 创建Runner
-	runner := NewRunnerCompat(spider, ruleManager)
+	runner := NewRunnerCompat(fetcherClient, ruleManager)
 	// 执行扫描
 	result, err := runner.Scan(ts.URL)
 	// 验证结果

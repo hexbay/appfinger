@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hexbay/appfinger/pkg/external/customrules"
+	"github.com/hexbay/appfinger/pkg/fetch"
+	"github.com/hexbay/appfinger/pkg/matchers"
+	"github.com/hexbay/appfinger/pkg/rule"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/levels"
 	"github.com/stretchr/testify/assert"
-	"github.com/hexbay/appfinger/pkg/crawl"
-	"github.com/hexbay/appfinger/pkg/external/customrules"
-	"github.com/hexbay/appfinger/pkg/matchers"
-	"github.com/hexbay/appfinger/pkg/rule"
 )
 
 func TestParseOptions(t *testing.T) {
@@ -49,7 +49,7 @@ func TestParseOptions(t *testing.T) {
 
 func TestRuleMatching(t *testing.T) {
 	// Create a test banner
-	banner := &crawl.Banner{
+	banner := &fetch.Banner{
 		Uri:        "http://example.com",
 		Body:       "<html><body>Test content with WordPress</body></html>",
 		Title:      "Test Page",
@@ -66,7 +66,7 @@ func TestRuleMatching(t *testing.T) {
 		Words: []string{"WordPress"},
 	}
 	wordPressMatcher.Type.MatcherType = matchers.WordsMatcher
-	
+
 	apacheMatcher := &matchers.Matcher{
 		Part:  "headers.server",
 		Words: []string{"Apache"},
@@ -98,7 +98,7 @@ func TestRuleMatching(t *testing.T) {
 	results := finger.Match("http", getMatchPart)
 	assert.NotNil(t, results, "Results should not be nil")
 	assert.Equal(t, 2, len(results), "Should have 2 matches")
-	
+
 	// Check that the matched rules are correct
 	matchedNames := make([]string, 0, len(results))
 	for _, result := range results {
@@ -109,7 +109,7 @@ func TestRuleMatching(t *testing.T) {
 }
 
 // createMatchPartGetter creates a MatchPartGetter function from a Banner
-func createMatchPartGetter(banner *crawl.Banner) rule.MatchPartGetter {
+func createMatchPartGetter(banner *fetch.Banner) rule.MatchPartGetter {
 	lowerCache := make(map[string]string)
 	lowerCache["body"] = strings.ToLower(banner.Body)
 	lowerCache["header"] = strings.ToLower(banner.Header)
@@ -120,7 +120,7 @@ func createMatchPartGetter(banner *crawl.Banner) rule.MatchPartGetter {
 	for key, value := range banner.Headers {
 		lowerCache[key] = strings.ToLower(value)
 	}
-	
+
 	return func(part string, caseSensitive bool) string {
 		if !caseSensitive {
 			if strings.Contains(part, "headers.") {
@@ -192,7 +192,7 @@ func TestFormatExtract(t *testing.T) {
 			"name": "test",
 		},
 	}
-	
+
 	result := formatExtract(extract)
 	assert.NotEmpty(t, result, "Format extract should return non-empty string")
 	assert.Contains(t, result, "component1", "Should contain component1")
@@ -209,7 +209,7 @@ func TestStringTerms(t *testing.T) {
 		{" trimmed ", "trimmed"},
 		{"normal", "normal"},
 	}
-	
+
 	for _, tt := range tests {
 		result := StringTerms(tt.input)
 		assert.Equal(t, tt.expected, result, "StringTerms should process string correctly")
@@ -229,7 +229,7 @@ func TestSanitize(t *testing.T) {
 		{"", "", true},
 		{"   ", "", true},
 	}
-	
+
 	for _, tt := range tests {
 		result, err := sanitize(tt.input)
 		if tt.shouldError {

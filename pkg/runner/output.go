@@ -2,13 +2,13 @@ package runner
 
 import (
 	"fmt"
+	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/logrusorgru/aurora/v4"
-	"github.com/hexbay/appfinger/pkg/crawl"
 	"strings"
 	"unicode"
 )
 
-func formatConsole(target string, banner *crawl.Banner, components map[string]map[string]string) string {
+func formatConsole(target string, banner *fetch.Banner, components map[string]map[string]string) string {
 	var s string
 	s += aurora.Cyan(target).String()
 	if banner.Title != "" {

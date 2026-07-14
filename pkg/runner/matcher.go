@@ -2,13 +2,13 @@ package runner
 
 import (
 	"fmt"
-	"github.com/hexbay/appfinger/pkg/crawl"
+	"github.com/hexbay/appfinger/pkg/fetch"
 	"strings"
 )
 
-// BannerAdapter 将crawl.Banner适配为matchers.BannerInfo
+// BannerAdapter 将fetch.Banner适配为matchers.BannerInfo
 type BannerAdapter struct {
-	banner *crawl.Banner
+	banner *fetch.Banner
 }
 
 // GetMatchPart 实现BannerInfo接口的GetMatchPart方法
