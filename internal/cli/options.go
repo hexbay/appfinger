@@ -1,13 +1,13 @@
-package internal
+package cli
 
 import (
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/hexbay/appfinger/pkg/external/customrules"
 	"github.com/projectdiscovery/goflags"
 	"github.com/projectdiscovery/gologger"
-	"github.com/hexbay/appfinger/pkg/external/customrules"
 )
 
 type Options struct {

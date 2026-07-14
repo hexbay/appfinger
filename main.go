@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/hexbay/appfinger/internal"
+	"github.com/hexbay/appfinger/internal/cli"
 	"github.com/hexbay/appfinger/pkg/external/customrules"
 	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
@@ -34,7 +34,7 @@ ______          %s             ________  __
 
 func main() {
 	gologger.DefaultLogger.SetMaxLevel(levels.LevelWarning)
-	options := internal.ParseOptions()
+	options := cli.ParseOptions()
 	if options.Debug {
 		gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
 	}
@@ -92,7 +92,7 @@ func main() {
 		totalRules += len(rules)
 	}
 	gologger.Info().Msgf("Loaded %d rule categories with %d total rules", len(manager.GetFinger().Rules), totalRules)
-	// 将internal.Options转换为runner.Options
+	// 将cli.Options转换为runner.Options
 	runnerOptions := &runner.Options{
 		// 输入相关
 		Targets: options.URL,
