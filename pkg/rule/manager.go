@@ -1,10 +1,12 @@
 package rule
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/hexbay/appfinger/pkg/external/customrules"
 	"github.com/projectdiscovery/gologger"
 )
 
@@ -43,6 +45,15 @@ func NewManagerWithPath(path string) (*Manager, error) {
 	m := &Manager{}
 	err := m.LoadRules(path)
 	return m, err
+}
+
+// LoadDefaultRules ensures the default rule repository exists and loads it.
+func LoadDefaultRules(ctx context.Context) (*Manager, error) {
+	rulePath, err := customrules.EnsureDefaultDirectory(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return NewManagerWithPath(rulePath)
 }
 
 // GetRuleManager 获取默认的规则管理器实例

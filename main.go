@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/hexbay/appfinger/internal/cli"
@@ -43,10 +44,17 @@ func main() {
 		return
 	}
 	if options.UpdateRule {
-		customrules.DefaultProvider.Update(context.Background(), options.FingerHome)
+		if err := customrules.DefaultProvider.Update(context.Background(), options.FingerHome); err != nil {
+			gologger.Error().Msgf("update rules failed: %s", err.Error())
+			os.Exit(1)
+		}
 		return
 	}
 	if options.Validate {
+		if err := ensureDefaultRules(context.Background(), options.FingerHome); err != nil {
+			gologger.Error().Msgf("init default rules failed: %s", err.Error())
+			os.Exit(1)
+		}
 		// 严格校验：收集所有规则文件中的 YAML/Matcher 错误
 		if errs, fatalErr := rule.ValidateRuleDirectory(options.FingerHome); fatalErr != nil {
 			gologger.Error().Msgf("validate rules failed: %s", fatalErr.Error())
@@ -80,6 +88,10 @@ func main() {
 	fetchOptions.Timeout = time.Duration(options.Timeout) * time.Second
 	fetchOptions.Proxy = options.Proxy
 	fetcherClient := fetch.NewFetcher(fetchOptions)
+	if err := ensureDefaultRules(context.Background(), options.FingerHome); err != nil {
+		gologger.Error().Msgf("init default rules failed: %s", err.Error())
+		os.Exit(1)
+	}
 	manager := rule.GetRuleManager()
 	err := manager.LoadRules(options.FingerHome)
 	if err != nil {
@@ -127,4 +139,11 @@ func main() {
 		gologger.Error().Msgf(err.Error())
 		return
 	}
+}
+
+func ensureDefaultRules(ctx context.Context, rulesDir string) error {
+	if filepath.Clean(rulesDir) != filepath.Clean(customrules.GetDefaultDirectory()) {
+		return nil
+	}
+	return customrules.EnsureDirectory(ctx, rulesDir)
 }

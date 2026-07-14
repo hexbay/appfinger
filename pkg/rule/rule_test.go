@@ -1,6 +1,8 @@
 package rule
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/hexbay/appfinger/pkg/external/customrules"
 	"github.com/hexbay/appfinger/pkg/fetch"
@@ -88,6 +90,16 @@ func TestRuleMatchHonorsCaseSensitive(t *testing.T) {
 	})
 	if matched {
 		t.Fatal("case-sensitive matcher should not match different casing")
+	}
+}
+
+func TestLoadDefaultRulesHonorsCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := LoadDefaultRules(ctx)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled, got %v", err)
 	}
 }
 

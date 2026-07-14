@@ -106,6 +106,7 @@ HELP:
 ## 🧩 指纹规则库
 
 AppFinger 使用 [finger-rules](https://github.com/hexbay/finger-rules) 中的 YAML 指纹规则。
+默认规则目录不存在时，AppFinger 会自动下载 `finger-rules` 完成初始化。
 
 更新本地规则库：
 
@@ -131,6 +132,7 @@ appfinger -validate -d /path/to/finger-rules
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hexbay/appfinger/pkg/fetch"
@@ -141,8 +143,8 @@ import (
 func main() {
 	fetcher := fetch.NewFetcher(fetch.DefaultOption())
 
-	manager := rule.NewManager()
-	if err := manager.LoadRules("/path/to/finger-rules"); err != nil {
+	manager, err := rule.LoadDefaultRules(context.Background())
+	if err != nil {
 		panic(err)
 	}
 

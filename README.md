@@ -106,6 +106,7 @@ HELP:
 ## 🧩 Rule Repository
 
 AppFinger uses YAML rules from [finger-rules](https://github.com/hexbay/finger-rules).
+When the default rule directory does not exist, AppFinger initializes it automatically by downloading `finger-rules`.
 
 Update the local rule repository:
 
@@ -131,6 +132,7 @@ appfinger -validate -d /path/to/finger-rules
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hexbay/appfinger/pkg/fetch"
@@ -141,8 +143,8 @@ import (
 func main() {
 	fetcher := fetch.NewFetcher(fetch.DefaultOption())
 
-	manager := rule.NewManager()
-	if err := manager.LoadRules("/path/to/finger-rules"); err != nil {
+	manager, err := rule.LoadDefaultRules(context.Background())
+	if err != nil {
 		panic(err)
 	}
 
