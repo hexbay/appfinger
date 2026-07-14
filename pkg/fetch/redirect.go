@@ -155,8 +155,12 @@ func findAttribute(attrs []html.Attribute, key string) string {
 	}
 	return ""
 }
-func ExtractCharset(htmlContent string) string {
-	reader := strings.NewReader(htmlContent)
+func ExtractCharset(htmlContent []byte) string {
+	const maxCharsetScanSize = 64 * 1024
+	if len(htmlContent) > maxCharsetScanSize {
+		htmlContent = htmlContent[:maxCharsetScanSize]
+	}
+	reader := strings.NewReader(string(htmlContent))
 	doc, err := html.Parse(reader)
 	if err != nil {
 		return "UTF-8"

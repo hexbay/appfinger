@@ -291,7 +291,7 @@ func RequestOnce(client *retryablehttp.Client, uri string, options ...*Options) 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxBodySize))
 	label := ExtractContentTypeCharset(resp.Header.Get("Content-Type"))
 	if label == "" {
-		label = ExtractCharset(string(body))
+		label = ExtractCharset(body)
 	}
 	bodyString := ResponseDecoding(body, label)
 
