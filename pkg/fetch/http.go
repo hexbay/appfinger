@@ -245,7 +245,7 @@ func RequestOnce(client *retryablehttp.Client, uri string, options ...*Options) 
 	for i := 0; i < maxRedirect; i++ {
 		var r2 *http.Response
 		if requestOptions.DebugReq {
-			if dump, dumpErr := httputil.DumpRequestOut(req.Request, true); dumpErr == nil {
+			if dump, dumpErr := httputil.DumpRequestOut(req.Request, false); dumpErr == nil {
 				fmt.Println("Dump Request For " + req.URL.String() + "\r\n" + string(dump))
 			}
 		}
