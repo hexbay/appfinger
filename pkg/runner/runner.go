@@ -40,6 +40,7 @@ type Runner struct {
 	ruleManager *rule.Manager
 	options     *Options    // 运行时配置选项
 	outputs     []io.Writer // 输出写入器
+	closers     []io.Closer // 需要关闭的输出资源
 }
 
 // NewRunnerWithOptions 从选项创建Runner实例
@@ -99,6 +100,7 @@ func NewRunner(crawler *crawl.Crawler, ruleManager *rule.Manager, options *Optio
 		ruleManager: ruleManager,
 		options:     options,
 		outputs:     []io.Writer{},
+		closers:     []io.Closer{},
 	}
 
 	// 如果指定了输出文件，初始化输出写入器
@@ -108,6 +110,7 @@ func NewRunner(crawler *crawl.Crawler, ruleManager *rule.Manager, options *Optio
 			return nil, fmt.Errorf("无法创建输出文件: %v", err)
 		}
 		runner.outputs = append(runner.outputs, outputFile)
+		runner.closers = append(runner.closers, outputFile)
 	}
 	// 如果没有设置回调函数，使用默认的控制台输出
 	if options.Callback == nil {
@@ -147,6 +150,20 @@ func NewRunner(crawler *crawl.Crawler, ruleManager *rule.Manager, options *Optio
 	return runner, nil
 }
 
+// Close 释放Runner持有的输出资源。
+func (r *Runner) Close() error {
+	var errs []string
+	for _, closer := range r.closers {
+		if err := closer.Close(); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("close outputs failed: %s", strings.Join(errs, "; "))
+	}
+	return nil
+}
+
 // NewRunnerCompat 向后兼容的NewRunner函数，用于支持现有代码
 func NewRunnerCompat(crawler *crawl.Crawler, ruleManager *rule.Manager) *Runner {
 	// 使用默认选项创建Runner
@@ -159,6 +176,7 @@ func NewRunnerCompat(crawler *crawl.Crawler, ruleManager *rule.Manager) *Runner 
 			ruleManager: ruleManager,
 			options:     &DefaultOptions,
 			outputs:     []io.Writer{},
+			closers:     []io.Closer{},
 		}
 	}
 	return runner

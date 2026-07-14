@@ -116,6 +116,11 @@ func main() {
 		gologger.Print().Msgf(err.Error())
 		return
 	}
+	defer func() {
+		if err := appRunner.Close(); err != nil {
+			gologger.Warning().Msgf(err.Error())
+		}
+	}()
 	err = appRunner.Enumerate()
 	if err != nil {
 		gologger.Error().Msgf(err.Error())
