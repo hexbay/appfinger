@@ -47,7 +47,10 @@ func isAbsoluteURL(url string) bool {
 	return !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://"))
 }
 
-func readICON(client *retryablehttp.Client, banner *Banner) (iconHash int32, err error) {
+func readICON(client *retryablehttp.Client, banner *Banner, maxIconSize int64) (iconHash int32, err error) {
+	if maxIconSize <= 0 {
+		maxIconSize = DefaultMaxIconSize
+	}
 	var body []byte
 	var req *retryablehttp.Request
 	var resp *http.Response
@@ -101,7 +104,7 @@ func readICON(client *retryablehttp.Client, banner *Banner) (iconHash int32, err
 		if resp.ContentLength == 0 {
 			return iconHash, errors.New("icon Not Found")
 		}
-		body, err = io.ReadAll(resp.Body)
+		body, err = io.ReadAll(io.LimitReader(resp.Body, maxIconSize))
 		if err != nil {
 			return iconHash, err
 		}
@@ -218,9 +221,15 @@ func isRedirectStatus(statusCode int) bool {
 	}
 }
 
-func RequestOnce(client *retryablehttp.Client, uri string, flags ...bool) (banner *Banner, redirectURL string, err error) {
-	disableJavaScript := len(flags) > 0 && flags[0]
-	debugReq := len(flags) > 1 && flags[1]
+func RequestOnce(client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
+	requestOptions := DefaultOption()
+	if len(options) > 0 && options[0] != nil {
+		requestOptions = options[0]
+	}
+	maxBodySize := requestOptions.MaxBodySize
+	if maxBodySize <= 0 {
+		maxBodySize = DefaultMaxBodySize
+	}
 	// 开始请求数据
 	var resp *http.Response
 	req, err := retryablehttp.NewRequest("GET", uri, nil)
@@ -235,7 +244,7 @@ func RequestOnce(client *retryablehttp.Client, uri string, flags ...bool) (banne
 	maxRedirect := 6
 	for i := 0; i < maxRedirect; i++ {
 		var r2 *http.Response
-		if debugReq {
+		if requestOptions.DebugReq {
 			if dump, dumpErr := httputil.DumpRequestOut(req.Request, true); dumpErr == nil {
 				fmt.Println("Dump Request For " + req.URL.String() + "\r\n" + string(dump))
 			}
@@ -279,7 +288,7 @@ func RequestOnce(client *retryablehttp.Client, uri string, flags ...bool) (banne
 	// get raw headers
 	headers, _ := httputil.DumpResponse(resp, false)
 	// get body
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxBodySize))
 	label := ExtractContentTypeCharset(resp.Header.Get("Content-Type"))
 	if label == "" {
 		label = ExtractCharset(string(body))
@@ -305,7 +314,7 @@ func RequestOnce(client *retryablehttp.Client, uri string, flags ...bool) (banne
 		banner.Certificate = parseCertificateInfo(resp.TLS)
 		banner.Cert = resp.TLS
 	}
-	if !disableJavaScript {
+	if !requestOptions.DisableJavaScript {
 		//解析JavaScript跳转
 		jsRedirectUri := parseJavaScript(uri, string(body))
 		if jsRedirectUri != "" {

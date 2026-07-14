@@ -47,10 +47,27 @@ func TestRequestOnceCanDisableJavaScriptRedirect(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	banner, redirectURL, err := RequestOnce(NewFetcher(DefaultOption()).GetClient(), ts.URL, true)
+	options := DefaultOption()
+	options.DisableJavaScript = true
+	banner, redirectURL, err := RequestOnce(NewFetcher(options).GetClient(), ts.URL, options)
 	assert.NoError(t, err)
 	assert.NotNil(t, banner)
 	assert.Empty(t, redirectURL)
+}
+
+func TestRequestOnceLimitsBodySize(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(strings.Repeat("a", 128)))
+	}))
+	defer ts.Close()
+
+	options := DefaultOption()
+	options.MaxBodySize = 16
+	options.DisableJavaScript = true
+	banner, _, err := RequestOnce(NewFetcher(options).GetClient(), ts.URL, options)
+
+	assert.NoError(t, err)
+	assert.Len(t, banner.Body, 16)
 }
 
 func TestReadIconClosesNonOKResponse(t *testing.T) {

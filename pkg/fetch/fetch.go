@@ -63,7 +63,7 @@ RedirectLoop:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			banner, nextURI, err = RequestOnce(c.httpClient, nextURI, c.options.DisableJavaScript, c.options.DebugReq)
+			banner, nextURI, err = RequestOnce(c.httpClient, nextURI, c.options)
 			if err != nil {
 				gologger.Debug().Msgf("Req Error:%v", err)
 				break RedirectLoop
@@ -93,7 +93,7 @@ RedirectLoop:
 	finalBanner := banners[len(banners)-1]
 	// 获取网站图标
 	if !c.options.DisableIcon {
-		_, err = readICON(c.httpClient, finalBanner)
+		_, err = readICON(c.httpClient, finalBanner, c.options.MaxIconSize)
 		if err != nil {
 			gologger.Debug().Msg(err.Error())
 		}
