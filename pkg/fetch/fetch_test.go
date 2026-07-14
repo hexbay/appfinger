@@ -52,3 +52,26 @@ func TestRequestOnceCanDisableJavaScriptRedirect(t *testing.T) {
 	assert.NotNil(t, banner)
 	assert.Empty(t, redirectURL)
 }
+
+func TestReadIconClosesNonOKResponse(t *testing.T) {
+	var iconRequested bool
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			_, _ = w.Write([]byte(`<html><link rel="icon" href="/favicon.ico"></html>`))
+		case "/favicon.ico":
+			iconRequested = true
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("not found"))
+		}
+	}))
+	defer ts.Close()
+
+	fetcher := NewFetcher(DefaultOption())
+	banner, err := fetcher.GetBanner(context.Background(), ts.URL)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, banner)
+	assert.True(t, iconRequested)
+	assert.Zero(t, banner.IconHash)
+}
