@@ -134,6 +134,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
@@ -141,7 +142,9 @@ import (
 )
 
 func main() {
-	fetcher := fetch.NewFetcher(fetch.DefaultOption())
+	fetchOptions := fetch.DefaultOption()
+	fetchOptions.Timeout = 10 * time.Second
+	fetcher := fetch.NewFetcher(fetchOptions)
 
 	manager, err := rule.LoadDefaultRules(context.Background())
 	if err != nil {
@@ -165,6 +168,10 @@ func main() {
 	fmt.Printf("%#v\n", result.Components)
 }
 ```
+
+使用 `runner.NewRunner` 并显式传入 `fetch.Fetcher` 时，HTTP 行为由
+`fetch.Options` 控制，例如超时、代理、favicon 获取、JavaScript 跳转解析和响应大小限制。
+`runner.Options` 主要控制目标枚举、并发、回调和输出行为。
 
 ## 🔎 工作原理
 

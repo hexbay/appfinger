@@ -28,3 +28,8 @@ var DefaultOptions = Options{
 	Threads: 10,
 	Timeout: 30,
 }
+
+func defaultOptions() *Options {
+	options := DefaultOptions
+	return &options
+}

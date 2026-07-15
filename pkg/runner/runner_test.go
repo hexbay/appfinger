@@ -107,3 +107,14 @@ func TestRunnerPlugin(t *testing.T) {
 	// as the test server may not match any real fingerprints
 	t.Logf("Scan completed with %d components detected", len(result.Components))
 }
+
+func TestNewDoesNotMutateDefaultOptions(t *testing.T) {
+	original := DefaultOptions
+
+	_, err := New(WithThreads(99), WithSilent(true))
+	assert.NoError(t, err)
+
+	assert.Equal(t, original.Threads, DefaultOptions.Threads)
+	assert.Equal(t, original.Timeout, DefaultOptions.Timeout)
+	assert.Nil(t, DefaultOptions.Callback)
+}

@@ -6,7 +6,10 @@ import (
 	"strings"
 )
 
-// BannerAdapter 将fetch.Banner适配为matchers.BannerInfo
+// BannerAdapter 将fetch.Banner适配为matchers.BannerInfo。
+//
+// Deprecated: this adapter is an internal compatibility helper and may be
+// removed in a future release.
 type BannerAdapter struct {
 	banner *fetch.Banner
 }
@@ -37,7 +40,7 @@ func (a *BannerAdapter) GetMatchPart(part string) string {
 	case "body_hash":
 		return fmt.Sprintf("%v", a.banner.BodyHash)
 	case "server":
-		return a.banner.Headers["Server"]
+		return a.banner.Headers["server"]
 	}
 	return ""
 }

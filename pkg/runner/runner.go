@@ -25,12 +25,18 @@ type Result struct {
 	Components map[string]map[string]string
 }
 
+// ExecutorsPlugin describes a rule plugin execution request.
+//
+// Deprecated: this type is an internal runner detail and may be removed in a
+// future release.
 type ExecutorsPlugin struct {
 	Plugin *rule.Plugin
 	Banner *fetch.Banner
 }
 
 // OutputFields 输出字段
+//
+// Deprecated: use Result or a custom callback for structured output.
 type OutputFields struct {
 	URL     string                       `json:"url"`
 	Extract map[string]map[string]string `json:"extract,omitempty"`
@@ -46,11 +52,14 @@ type Runner struct {
 	outputMu    sync.Mutex
 }
 
-// NewRunnerWithOptions 从选项创建Runner实例
+// NewRunnerWithOptions 从选项创建Runner实例。
+//
+// Deprecated: prefer NewRunner with explicit fetcher and rule manager, or New
+// with functional options.
 func NewRunnerWithOptions(options *Options) (*Runner, error) {
 	// 如果没有提供选项，使用默认选项
 	if options == nil {
-		options = &DefaultOptions
+		options = defaultOptions()
 	}
 
 	// 初始化Fetcher
@@ -95,7 +104,7 @@ func New(opts ...OptionFunc) (*Runner, error) {
 func NewRunner(fetcher *fetch.Fetcher, ruleManager *rule.Manager, options *Options) (*Runner, error) {
 	// 如果没有提供选项，使用默认选项
 	if options == nil {
-		options = &DefaultOptions
+		options = defaultOptions()
 	}
 	// 初始化Runner
 	runner := &Runner{
@@ -170,7 +179,9 @@ func (r *Runner) Close() error {
 	return nil
 }
 
-// NewRunnerCompat 向后兼容的NewRunner函数，用于支持现有代码
+// NewRunnerCompat 向后兼容的NewRunner函数，用于支持现有代码。
+//
+// Deprecated: use NewRunner and handle the returned error.
 func NewRunnerCompat(fetcher *fetch.Fetcher, ruleManager *rule.Manager) *Runner {
 	// 使用默认选项创建Runner
 	runner, err := NewRunner(fetcher, ruleManager, nil)
@@ -180,7 +191,7 @@ func NewRunnerCompat(fetcher *fetch.Fetcher, ruleManager *rule.Manager) *Runner 
 		return &Runner{
 			fetcher:     fetcher,
 			ruleManager: ruleManager,
-			options:     &DefaultOptions,
+			options:     defaultOptions(),
 			outputs:     []io.Writer{},
 			closers:     []io.Closer{},
 		}
@@ -188,7 +199,9 @@ func NewRunnerCompat(fetcher *fetch.Fetcher, ruleManager *rule.Manager) *Runner 
 	return runner
 }
 
-// NewDefaultRunner 创建默认的Runner实例
+// NewDefaultRunner 创建默认的Runner实例。
+//
+// Deprecated: use NewRunner with explicit dependencies.
 func NewDefaultRunner(options *fetch.Options, finger *rule.Finger) *Runner {
 	fetcher := fetch.NewFetcher(options)
 	var ruleManager *rule.Manager
@@ -317,7 +330,10 @@ func (r *Runner) matchBanners(finger *rule.Finger, banners []*fetch.Banner) (map
 	return results, plugins
 }
 
-// CreateMatchPartGetter 创建一个从banner中提取匹配部分的函数
+// CreateMatchPartGetter 创建一个从banner中提取匹配部分的函数。
+//
+// Deprecated: this function is an internal rule matching helper and may be
+// removed in a future release.
 func CreateMatchPartGetter(banner *fetch.Banner) rule.MatchPartGetter {
 	lowerCache := make(map[string]string)
 	lowerCache["body"] = strings.ToLower(banner.Body)
@@ -478,7 +494,10 @@ func (r *Runner) enumerateMultipleTargets(ctx context.Context, reader io.Reader)
 	return nil
 }
 
-// MergeMaps 合并两个map
+// MergeMaps 合并两个map。
+//
+// Deprecated: this helper is an internal runner detail and may be removed in a
+// future release.
 func MergeMaps(m1, m2 map[string]map[string]string) map[string]map[string]string {
 	result := make(map[string]map[string]string)
 

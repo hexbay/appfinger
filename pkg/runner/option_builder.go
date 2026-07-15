@@ -20,7 +20,7 @@ type RunnerBuilder struct {
 // NewBuilder 创建一个新的Runner构建器
 func NewBuilder() *RunnerBuilder {
 	return &RunnerBuilder{
-		options: &DefaultOptions,
+		options: defaultOptions(),
 	}
 }
 

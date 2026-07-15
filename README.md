@@ -134,6 +134,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
@@ -141,7 +142,9 @@ import (
 )
 
 func main() {
-	fetcher := fetch.NewFetcher(fetch.DefaultOption())
+	fetchOptions := fetch.DefaultOption()
+	fetchOptions.Timeout = 10 * time.Second
+	fetcher := fetch.NewFetcher(fetchOptions)
 
 	manager, err := rule.LoadDefaultRules(context.Background())
 	if err != nil {
@@ -165,6 +168,11 @@ func main() {
 	fmt.Printf("%#v\n", result.Components)
 }
 ```
+
+When using `runner.NewRunner` with an explicit `fetch.Fetcher`, HTTP behavior
+such as timeout, proxy, icon fetching, JavaScript redirect parsing, and response
+size limits is controlled by `fetch.Options`. `runner.Options` controls target
+enumeration, concurrency, callbacks, and output behavior.
 
 ## 🔎 How It Works
 

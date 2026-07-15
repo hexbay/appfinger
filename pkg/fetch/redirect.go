@@ -155,6 +155,11 @@ func findAttribute(attrs []html.Attribute, key string) string {
 	}
 	return ""
 }
+
+// ExtractCharset extracts charset from an HTML document.
+//
+// Deprecated: this helper is exported for compatibility and may become
+// internal in a future release.
 func ExtractCharset(htmlContent []byte) string {
 	const maxCharsetScanSize = 64 * 1024
 	if len(htmlContent) > maxCharsetScanSize {

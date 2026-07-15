@@ -151,6 +151,11 @@ func parseCertificateInfo(ts *tls.ConnectionState) string {
 	ss += fmt.Sprintf("\tSubject: %s\n", cert.Subject.String())
 	return ss
 }
+
+// ResponseDecoding decodes response bytes with a charset label.
+//
+// Deprecated: this helper is exported for compatibility and may become
+// internal in a future release.
 func ResponseDecoding(body []byte, label string) string {
 	// 根据编码 对响应结果进行解码
 	var str string
@@ -199,6 +204,11 @@ func ResponseDecoding(body []byte, label string) string {
 	}
 	return str
 }
+
+// ExtractContentTypeCharset extracts charset from a Content-Type header.
+//
+// Deprecated: this helper is exported for compatibility and may become
+// internal in a future release.
 func ExtractContentTypeCharset(contentType string) (charset string) {
 	//	 从content-type 中提取Charset
 	re := regexp.MustCompile(`(?i)charset=([\w-]+)`)
@@ -233,6 +243,11 @@ func isRedirectStatus(statusCode int) bool {
 	}
 }
 
+// RequestOnce performs one HTTP request cycle and returns a banner plus a
+// client-side redirect URL when one is detected.
+//
+// Deprecated: prefer Fetcher.GetBanners or Fetcher.GetBanner for stable public
+// use. This low-level helper is kept for compatibility.
 func RequestOnce(ctx context.Context, client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
 	requestOptions := DefaultOption()
 	if len(options) > 0 && options[0] != nil {
@@ -377,6 +392,10 @@ func base64Py(data []byte) string {
 	return InsertInto(stdBase64, 76, '\n')
 }
 
+// InsertInto inserts sep every interval runes.
+//
+// Deprecated: this helper is exported for compatibility and may become
+// internal in a future release.
 func InsertInto(s string, interval int, sep rune) string {
 	var buffer bytes.Buffer
 	before := interval - 1
