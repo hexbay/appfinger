@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
@@ -47,7 +48,7 @@ func isAbsoluteURL(url string) bool {
 	return !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://"))
 }
 
-func readICON(client *retryablehttp.Client, banner *Banner, maxIconSize int64) (iconHash int32, err error) {
+func readICON(ctx context.Context, client *retryablehttp.Client, banner *Banner, maxIconSize int64) (iconHash int32, err error) {
 	if maxIconSize <= 0 {
 		maxIconSize = DefaultMaxIconSize
 	}
@@ -84,6 +85,7 @@ func readICON(client *retryablehttp.Client, banner *Banner, maxIconSize int64) (
 			// 图片异常不影响
 			return iconHash, err
 		}
+		req = req.WithContext(ctx)
 		req.Header.Set("Referer", banner.Uri)
 		resp, err = client.Do(req)
 		if err != nil {
@@ -221,7 +223,10 @@ func isRedirectStatus(statusCode int) bool {
 	}
 }
 
-func RequestOnce(client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
+func RequestOnce(ctx context.Context, client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	requestOptions := DefaultOption()
 	if len(options) > 0 && options[0] != nil {
 		requestOptions = options[0]
@@ -236,6 +241,7 @@ func RequestOnce(client *retryablehttp.Client, uri string, options ...*Options) 
 	if err != nil {
 		return banner, redirectURL, err
 	}
+	req = req.WithContext(ctx)
 	// 手动设置host，部分网站因为http 携带80 端口会被拦截 比如baidu.com
 	req.Host = getHttpHostname(uri)
 	req.Header.Set("accept-language", "zh-CN,zh;q=0.9")
@@ -271,6 +277,7 @@ func RequestOnce(client *retryablehttp.Client, uri string, options ...*Options) 
 			_, _ = io.Copy(io.Discard, resp.Body)
 			_ = resp.Body.Close()
 			req, _ = retryablehttp.NewRequest("GET", newURL.String(), nil)
+			req = req.WithContext(ctx)
 			continue
 		} else {
 			break

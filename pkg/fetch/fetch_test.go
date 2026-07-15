@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"context"
+	"errors"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/levels"
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFetch(t *testing.T) {
@@ -33,7 +35,7 @@ func TestRequestOnceFollowsTemporaryRedirect(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	banner, redirectURL, err := RequestOnce(NewFetcher(DefaultOption()).GetClient(), ts.URL)
+	banner, redirectURL, err := RequestOnce(context.Background(), NewFetcher(DefaultOption()).GetClient(), ts.URL)
 	assert.NoError(t, err)
 	assert.Empty(t, redirectURL)
 	assert.NotNil(t, banner)
@@ -49,7 +51,7 @@ func TestRequestOnceCanDisableJavaScriptRedirect(t *testing.T) {
 
 	options := DefaultOption()
 	options.DisableJavaScript = true
-	banner, redirectURL, err := RequestOnce(NewFetcher(options).GetClient(), ts.URL, options)
+	banner, redirectURL, err := RequestOnce(context.Background(), NewFetcher(options).GetClient(), ts.URL, options)
 	assert.NoError(t, err)
 	assert.NotNil(t, banner)
 	assert.Empty(t, redirectURL)
@@ -61,7 +63,7 @@ func TestRequestOnceSkipsJavaScriptParsingForPlainHTML(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	banner, redirectURL, err := RequestOnce(NewFetcher(DefaultOption()).GetClient(), ts.URL)
+	banner, redirectURL, err := RequestOnce(context.Background(), NewFetcher(DefaultOption()).GetClient(), ts.URL)
 	assert.NoError(t, err)
 	assert.NotNil(t, banner)
 	assert.Empty(t, redirectURL)
@@ -77,10 +79,30 @@ func TestRequestOnceLimitsBodySize(t *testing.T) {
 	options := DefaultOption()
 	options.MaxBodySize = 16
 	options.DisableJavaScript = true
-	banner, _, err := RequestOnce(NewFetcher(options).GetClient(), ts.URL, options)
+	banner, _, err := RequestOnce(context.Background(), NewFetcher(options).GetClient(), ts.URL, options)
 
 	assert.NoError(t, err)
 	assert.Len(t, banner.Body, 16)
+}
+
+func TestRequestOnceHonorsCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, _, err := RequestOnce(ctx, NewFetcher(DefaultOption()).GetClient(), "http://127.0.0.1:1")
+
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, context.Canceled), "expected context canceled, got %v", err)
+}
+
+func TestFetcherDialTimeoutUsesOptionsTimeout(t *testing.T) {
+	options := DefaultOption()
+	options.Timeout = 150 * time.Millisecond
+	fetcher := NewFetcher(options)
+
+	transport, ok := fetcher.GetClient().HTTPClient.Transport.(*http.Transport)
+	assert.True(t, ok)
+	assert.NotNil(t, transport.DialContext)
 }
 
 func TestReadIconClosesNonOKResponse(t *testing.T) {

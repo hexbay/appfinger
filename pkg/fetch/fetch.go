@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/retryablehttp-go"
+	"net"
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 )
 
 // Fetcher 定义HTTP探测和Banner采集的核心结构。
@@ -33,6 +35,10 @@ func (c *Fetcher) initClient() {
 		opts.KillIdleConn = true
 		opts.RetryMax = c.options.RetryMax
 		transport := retryablehttp.DefaultReusePooledTransport()
+		transport.DialContext = (&net.Dialer{
+			Timeout:   c.options.Timeout,
+			KeepAlive: 10 * time.Second,
+		}).DialContext
 		if c.options.Proxy != "" {
 			transport.Proxy = func(request *http.Request) (*url.URL, error) {
 				return url.Parse(c.options.Proxy)
@@ -63,7 +69,7 @@ RedirectLoop:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			banner, nextURI, err = RequestOnce(c.httpClient, nextURI, c.options)
+			banner, nextURI, err = RequestOnce(ctx, c.httpClient, nextURI, c.options)
 			if err != nil {
 				gologger.Debug().Msgf("Req Error:%v", err)
 				break RedirectLoop
@@ -93,7 +99,7 @@ RedirectLoop:
 	finalBanner := banners[len(banners)-1]
 	// 获取网站图标
 	if !c.options.DisableIcon {
-		_, err = readICON(c.httpClient, finalBanner, c.options.MaxIconSize)
+		_, err = readICON(ctx, c.httpClient, finalBanner, c.options.MaxIconSize)
 		if err != nil {
 			gologger.Debug().Msg(err.Error())
 		}
