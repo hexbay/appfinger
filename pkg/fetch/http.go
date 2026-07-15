@@ -243,13 +243,7 @@ func isRedirectStatus(statusCode int) bool {
 	}
 }
 
-// RequestOnce performs one HTTP request cycle and returns a banner plus a
-// client-side redirect URL when one is detected.
-//
-// Deprecated: use Fetcher.GetBanner or Fetcher.GetBanners. This low-level
-// helper exposes the internal retryablehttp client and is retained only for
-// source compatibility.
-func RequestOnce(ctx context.Context, client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
+func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
 	requestOptions := DefaultOption()
 	if len(options) > 0 && options[0] != nil {
 		requestOptions = options[0]

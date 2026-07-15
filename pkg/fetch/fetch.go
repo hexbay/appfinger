@@ -79,15 +79,6 @@ func (c *Fetcher) buildBaseHTTPClient() *http.Client {
 	return &http.Client{Transport: transport}
 }
 
-// GetClient exposes the internal retryable HTTP client for compatibility.
-// New code should use GetBanner or GetBanners instead.
-//
-// Deprecated: direct client access couples callers to retryablehttp.
-func (c *Fetcher) GetClient() *retryablehttp.Client {
-	c.initClient()
-	return c.httpClient
-}
-
 // GetBanners 实现BannerProvider接口
 func (c *Fetcher) GetBanners(ctx context.Context, uri string) ([]*Banner, error) {
 	var banners []*Banner
@@ -101,7 +92,7 @@ RedirectLoop:
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			banner, nextURI, err = RequestOnce(ctx, c.httpClient, nextURI, c.options)
+			banner, nextURI, err = requestOnce(ctx, c.httpClient, nextURI, c.options)
 			if err != nil {
 				gologger.Debug().Msgf("Req Error:%v", err)
 				break RedirectLoop
@@ -122,6 +113,9 @@ RedirectLoop:
 		}
 	}
 	if len(banners) == 0 {
+		if err != nil {
+			return nil, fmt.Errorf("get %s: %w", uri, err)
+		}
 		return nil, errors.New(fmt.Sprintf("Get %s Error!", uri))
 	}
 	// 获取最后一个Banner（最终页面）
