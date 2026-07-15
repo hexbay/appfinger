@@ -9,6 +9,10 @@ import (
 
 // CompileMatchers performs the initial setup operation on a matcher
 func (matcher *Matcher) CompileMatchers() error {
+	// Compilation is idempotent; derived runtime state must not accumulate.
+	matcher.regexCompiled = nil
+	matcher.matcherType = 0
+	matcher.condition = 0
 	var ok bool
 	// Support hexadecimal encoding for matchers too.
 	if matcher.Encoding == "hex" {

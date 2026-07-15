@@ -70,3 +70,11 @@ func TestHexEncoding(t *testing.T) {
 	require.True(t, isMatched, "Could not match valid Hex condition")
 	require.Equal(t, m.Words, matched)
 }
+
+func TestCompileMatchersIsIdempotent(t *testing.T) {
+	m := &Matcher{Type: MatcherTypeHolder{MatcherType: RegexMatcher}, Regex: []string{"demo"}}
+	require.NoError(t, m.CompileMatchers())
+	require.NoError(t, m.CompileMatchers())
+	matched, _ := m.MatchRegex("demo")
+	require.True(t, matched)
+}

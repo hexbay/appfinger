@@ -271,11 +271,6 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 	maxRedirect := 6
 	for i := 0; i < maxRedirect; i++ {
 		var r2 *http.Response
-		if requestOptions.DebugReq {
-			if dump, dumpErr := httputil.DumpRequestOut(req.Request, false); dumpErr == nil {
-				fmt.Println("Dump Request For " + req.URL.String() + "\r\n" + string(dump))
-			}
-		}
 		r2, err = client.Do(req)
 		if err != nil {
 			break

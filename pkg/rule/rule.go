@@ -139,6 +139,9 @@ func (r *Rule) Match(getMatchPart MatchPartGetter) (bool, map[string]string) {
 		default:
 			panic("unhandled default case:" + matcher.GetType().String() + " for name: " + r.Name)
 		}
+		if matcher.Negative {
+			matched = !matched
+		}
 		if matcher.Name != "" && len(matchedString) > 0 {
 			matchedMapString[matcher.Name] = matchedString[0]
 		}
