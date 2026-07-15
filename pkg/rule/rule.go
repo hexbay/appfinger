@@ -32,11 +32,11 @@ type Rule struct {
 }
 
 // Finger 根据协议分组
-type Finger struct {
+type RuleSet struct {
 	Rules map[string][]*Rule `yaml:"rules"`
 }
 
-func (f Finger) AddRules(rules []*Rule) {
+func (f RuleSet) AddRules(rules []*Rule) {
 	for _, rule := range rules {
 		if rule.Service == "" {
 			rule.Service = "http"
@@ -46,7 +46,7 @@ func (f Finger) AddRules(rules []*Rule) {
 }
 
 // Match 执行指纹匹配并返回包含规则的匹配结果
-func (f Finger) Match(service string, getMatchPart MatchPartGetter) []*MatchResult {
+func (f RuleSet) Match(service string, getMatchPart MatchPartGetter) []*MatchResult {
 	var results = make([]*MatchResult, 0)
 	rules, ok := f.Rules[service]
 	if !ok {
@@ -66,8 +66,8 @@ func (f Finger) Match(service string, getMatchPart MatchPartGetter) []*MatchResu
 	return results
 }
 
-func NewFinger() *Finger {
-	return &Finger{Rules: make(map[string][]*Rule)}
+func NewRuleSet() *RuleSet {
+	return &RuleSet{Rules: make(map[string][]*Rule)}
 }
 
 func (r *Rule) Match(getMatchPart MatchPartGetter) (bool, map[string]string) {

@@ -17,8 +17,8 @@ func checkIsRuleFile(filename string) bool {
 	return strings.HasSuffix(filename, ".yaml") || strings.HasSuffix(filename, ".yml")
 }
 
-func ScanRuleDirectory(directory string) (*Finger, error) {
-	group := NewFinger()
+func ScanRuleDirectory(directory string) (*RuleSet, error) {
+	group := NewRuleSet()
 	// 判断是文件名还是目录
 	file, err := os.Stat(directory)
 	if err != nil {

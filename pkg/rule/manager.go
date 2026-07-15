@@ -12,7 +12,7 @@ import (
 
 // Manager 规则管理器，实现单例模式和热更新
 type Manager struct {
-	finger       *Finger
+	ruleSet      *RuleSet
 	rulePath     string
 	lastLoadTime time.Time
 	mutex        sync.RWMutex
@@ -44,23 +44,23 @@ func (m *Manager) LoadRules(path string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	// 加载规则
-	finger, err := ScanRuleDirectory(path)
+	ruleSet, err := ScanRuleDirectory(path)
 	if err != nil {
 		return fmt.Errorf("加载规则库失败: %v", err)
 	}
 	// 更新规则和路径
-	m.finger = finger
+	m.ruleSet = ruleSet
 	m.rulePath = path
 	m.lastLoadTime = time.Now()
-	gologger.Info().Msgf("Loaded rules from: %s rules: %d", path, len(m.finger.Rules))
+	gologger.Info().Msgf("Loaded rules from: %s rules: %d", path, len(m.ruleSet.Rules))
 	return nil
 }
 
-// GetFinger 获取指纹库
-func (m *Manager) GetFinger() *Finger {
+// GetRuleSet returns the latest immutable rule snapshot.
+func (m *Manager) GetRuleSet() *RuleSet {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
-	return m.finger
+	return m.ruleSet
 }
 
 // ReloadRules 重新加载规则库
@@ -82,7 +82,7 @@ func (m *Manager) GetLastLoadTime() time.Time {
 func (m *Manager) IsLoaded() bool {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
-	return m.finger != nil
+	return m.ruleSet != nil
 }
 
 // FindRuleByName 根据名称查找规则
@@ -95,7 +95,7 @@ func (m *Manager) FindRuleByName(name string) *Rule {
 	defer m.mutex.RUnlock()
 
 	// 查找指定名称的规则
-	if rules, ok := m.finger.Rules[name]; ok && len(rules) > 0 {
+	if rules, ok := m.ruleSet.Rules[name]; ok && len(rules) > 0 {
 		return rules[0] // 返回第一个匹配的规则
 	}
 

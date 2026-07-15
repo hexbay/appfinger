@@ -151,7 +151,7 @@ func main() {
 		panic(err)
 	}
 
-	r, err := scanner.New(scanner.Config{Fetcher: fetcher, Rules: manager.GetFinger()})
+	r, err := scanner.New(scanner.Config{Fetcher: fetcher, Rules: manager.GetRuleSet()})
 	if err != nil {
 		panic(err)
 	}

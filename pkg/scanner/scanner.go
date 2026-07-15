@@ -23,12 +23,12 @@ type Result struct {
 
 type Config struct {
 	Fetcher *fetch.Fetcher
-	Rules   *rule.Finger
+	Rules   *rule.RuleSet
 }
 
 type Scanner struct {
 	fetcher *fetch.Fetcher
-	rules   *rule.Finger
+	rules   *rule.RuleSet
 }
 
 func New(config Config) (*Scanner, error) {
@@ -69,7 +69,7 @@ func (s *Scanner) collect(ctx context.Context, target string) ([]*fetch.Banner, 
 	return s.fetcher.GetBanners(ctx, target)
 }
 
-func (s *Scanner) executePlugins(ctx context.Context, finger *rule.Finger, components map[string]map[string]string, last *fetch.Banner, plugins []pluginRequest) (map[string]map[string]string, *fetch.Banner, error) {
+func (s *Scanner) executePlugins(ctx context.Context, finger *rule.RuleSet, components map[string]map[string]string, last *fetch.Banner, plugins []pluginRequest) (map[string]map[string]string, *fetch.Banner, error) {
 	seen := make(map[string]struct{})
 	for _, p := range plugins {
 		select {
@@ -98,7 +98,7 @@ type pluginRequest struct {
 	banner *fetch.Banner
 }
 
-func matchBanners(finger *rule.Finger, banners []*fetch.Banner) (map[string]map[string]string, []pluginRequest) {
+func matchBanners(finger *rule.RuleSet, banners []*fetch.Banner) (map[string]map[string]string, []pluginRequest) {
 	result := make(map[string]map[string]string)
 	var plugins []pluginRequest
 	for _, banner := range banners {

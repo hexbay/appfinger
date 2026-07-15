@@ -74,10 +74,10 @@ func main() {
 		}
 		// 计算规则总数
 		totalRules := 0
-		for _, rules := range manager.GetFinger().Rules {
+		for _, rules := range manager.GetRuleSet().Rules {
 			totalRules += len(rules)
 		}
-		gologger.Info().Msgf("Validate success: loaded %d rule categories with %d total rules", len(manager.GetFinger().Rules), totalRules)
+		gologger.Info().Msgf("Validate success: loaded %d rule categories with %d total rules", len(manager.GetRuleSet().Rules), totalRules)
 		return
 	}
 	fetchOptions := fetch.DefaultOption()
@@ -100,11 +100,11 @@ func main() {
 	}
 	// 计算规则总数
 	totalRules := 0
-	for _, rules := range manager.GetFinger().Rules {
+	for _, rules := range manager.GetRuleSet().Rules {
 		totalRules += len(rules)
 	}
-	gologger.Info().Msgf("Loaded %d rule categories with %d total rules", len(manager.GetFinger().Rules), totalRules)
-	appScanner, err := scanner.New(scanner.Config{Fetcher: fetcherClient, Rules: manager.GetFinger()})
+	gologger.Info().Msgf("Loaded %d rule categories with %d total rules", len(manager.GetRuleSet().Rules), totalRules)
+	appScanner, err := scanner.New(scanner.Config{Fetcher: fetcherClient, Rules: manager.GetRuleSet()})
 	if err != nil {
 		gologger.Print().Msgf(err.Error())
 		return
