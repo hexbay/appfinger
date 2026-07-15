@@ -30,6 +30,9 @@ func (matcher *Matcher) CompileMatchers() error {
 	}
 
 	matcher.matcherType = computedType
+	if matcher.matcherType == SizeMatcher {
+		return fmt.Errorf("size matcher is not supported")
+	}
 
 	// By default, match on body if user hasn't provided any specific items
 	if matcher.Part == "" {

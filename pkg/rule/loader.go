@@ -131,6 +131,9 @@ func LoadRuleStrict(filename string) ([]*Rule, []error) {
 		return nil, allErrs
 	}
 	for _, rule := range rules {
+		if len(rule.Require) > 0 {
+			allErrs = append(allErrs, fmt.Errorf("rule %s uses unsupported require field", rule.Name))
+		}
 		for _, matcher := range rule.Matchers {
 			if matcher == nil {
 				allErrs = append(allErrs, fmt.Errorf("rule %s has nil matcher", rule.Name))
