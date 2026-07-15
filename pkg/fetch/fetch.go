@@ -33,7 +33,6 @@ func NewFetcher(options *Options) *Fetcher {
 // initClient 初始化HTTP客户端
 func (c *Fetcher) initClient() {
 	c.clientInitMu.Do(func() {
-		httpClient := c.buildHTTPClient()
 		opts := retryablehttp.Options{
 			RetryWaitMin: 1 * time.Second,    // 单次重试前的最小等待时间。
 			RetryWaitMax: 30 * time.Second,   // 单次重试前的最大等待时间。
@@ -48,13 +47,13 @@ func (c *Fetcher) initClient() {
 			// client-level timeout 已关闭，禁用 retryablehttp 的自动 timeout 调整逻辑。
 			NoAdjustTimeout: true,
 			// 使用 appfinger 默认 client，或调用方注入的自定义 client。
-			HttpClient: httpClient,
+			HttpClient: c.buildBaseHTTPClient(),
 		}
 		c.httpClient = retryablehttp.NewClient(opts)
 	})
 }
 
-func (c *Fetcher) buildHTTPClient() *http.Client {
+func (c *Fetcher) buildBaseHTTPClient() *http.Client {
 	if c.options.HTTPClient != nil {
 		return c.options.HTTPClient
 	}
