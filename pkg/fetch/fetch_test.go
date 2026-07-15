@@ -95,7 +95,7 @@ func TestRequestOnceHonorsCanceledContext(t *testing.T) {
 	assert.True(t, errors.Is(err, context.Canceled), "expected context canceled, got %v", err)
 }
 
-func TestFetcherDialTimeoutUsesOptionsTimeout(t *testing.T) {
+func TestFetcherDialUsesRequestContext(t *testing.T) {
 	options := DefaultOption()
 	options.Timeout = 150 * time.Millisecond
 	fetcher := NewFetcher(options)
@@ -103,6 +103,24 @@ func TestFetcherDialTimeoutUsesOptionsTimeout(t *testing.T) {
 	transport, ok := fetcher.GetClient().HTTPClient.Transport.(*http.Transport)
 	assert.True(t, ok)
 	assert.NotNil(t, transport.DialContext)
+}
+
+func TestRequestOnceExternalDeadlineOverridesOptionsTimeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer ts.Close()
+
+	options := DefaultOption()
+	options.Timeout = time.Nanosecond
+	options.DisableJavaScript = true
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	banner, _, err := RequestOnce(ctx, NewFetcher(options).GetClient(), ts.URL, options)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", banner.Body)
 }
 
 func TestReadIconClosesNonOKResponse(t *testing.T) {

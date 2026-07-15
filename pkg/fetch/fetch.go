@@ -31,12 +31,11 @@ func NewFetcher(options *Options) *Fetcher {
 func (c *Fetcher) initClient() {
 	c.clientInitMu.Do(func() {
 		opts := retryablehttp.DefaultOptionsSpraying
-		opts.Timeout = c.options.Timeout
+		opts.Timeout = 0
 		opts.KillIdleConn = true
 		opts.RetryMax = c.options.RetryMax
 		transport := retryablehttp.DefaultReusePooledTransport()
 		transport.DialContext = (&net.Dialer{
-			Timeout:   c.options.Timeout,
 			KeepAlive: 10 * time.Second,
 		}).DialContext
 		if c.options.Proxy != "" {
@@ -99,7 +98,7 @@ RedirectLoop:
 	finalBanner := banners[len(banners)-1]
 	// 获取网站图标
 	if !c.options.DisableIcon {
-		_, err = readICON(ctx, c.httpClient, finalBanner, c.options.MaxIconSize)
+		_, err = readICON(ctx, c.httpClient, finalBanner, c.options)
 		if err != nil {
 			gologger.Debug().Msg(err.Error())
 		}

@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func parseIconFile(body string) string {
@@ -48,7 +49,16 @@ func isAbsoluteURL(url string) bool {
 	return !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://"))
 }
 
-func readICON(ctx context.Context, client *retryablehttp.Client, banner *Banner, maxIconSize int64) (iconHash int32, err error) {
+func readICON(ctx context.Context, client *retryablehttp.Client, banner *Banner, options *Options) (iconHash int32, err error) {
+	requestOptions := DefaultOption()
+	if options != nil {
+		requestOptions = options
+	}
+	ctx, cancel := contextWithOptionsTimeout(ctx, requestOptions.Timeout)
+	if cancel != nil {
+		defer cancel()
+	}
+	maxIconSize := requestOptions.MaxIconSize
 	if maxIconSize <= 0 {
 		maxIconSize = DefaultMaxIconSize
 	}
@@ -224,12 +234,13 @@ func isRedirectStatus(statusCode int) bool {
 }
 
 func RequestOnce(ctx context.Context, client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	requestOptions := DefaultOption()
 	if len(options) > 0 && options[0] != nil {
 		requestOptions = options[0]
+	}
+	ctx, cancel := contextWithOptionsTimeout(ctx, requestOptions.Timeout)
+	if cancel != nil {
+		defer cancel()
 	}
 	maxBodySize := requestOptions.MaxBodySize
 	if maxBodySize <= 0 {
@@ -337,6 +348,19 @@ func RequestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 		}
 	}
 	return banner, "", nil
+}
+
+func contextWithOptionsTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if timeout <= 0 {
+		return ctx, nil
+	}
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, nil
+	}
+	return context.WithTimeout(ctx, timeout)
 }
 
 func mmh3(data []byte) int32 {
