@@ -63,9 +63,8 @@ func NewRunnerWithOptions(options *Options) (*Runner, error) {
 	}
 
 	// 初始化Fetcher
-	fetchOptions := &fetch.Options{
-		Timeout: time.Duration(options.Timeout) * time.Second,
-	}
+	fetchOptions := fetch.DefaultOption()
+	fetchOptions.Timeout = time.Duration(options.Timeout) * time.Second
 	fetcher := fetch.NewFetcher(fetchOptions)
 
 	// 初始化规则管理器

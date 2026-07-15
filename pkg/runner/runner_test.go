@@ -1,10 +1,12 @@
 package runner
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync/atomic"
 	"testing"
 
 	"github.com/hexbay/appfinger/pkg/external/customrules"
@@ -117,4 +119,27 @@ func TestNewDoesNotMutateDefaultOptions(t *testing.T) {
 	assert.Equal(t, original.Threads, DefaultOptions.Threads)
 	assert.Equal(t, original.Timeout, DefaultOptions.Timeout)
 	assert.Nil(t, DefaultOptions.Callback)
+}
+
+func TestNewRunnerWithOptionsKeepsFetchDefaults(t *testing.T) {
+	var requests atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if requests.Add(1) == 1 {
+			conn, _, err := w.(http.Hijacker).Hijack()
+			assert.NoError(t, err)
+			_ = conn.Close()
+			return
+		}
+		_, _ = w.Write([]byte("<html><title>ok</title></html>"))
+	}))
+	defer ts.Close()
+
+	runner, err := NewRunnerWithOptions(&Options{Timeout: 5})
+	assert.NoError(t, err)
+
+	banner, err := runner.fetcher.GetBanner(context.Background(), ts.URL)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, banner.StatusCode)
+	assert.GreaterOrEqual(t, requests.Load(), int32(2))
 }
