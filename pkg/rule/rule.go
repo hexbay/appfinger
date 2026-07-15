@@ -41,7 +41,7 @@ type CompiledRule struct {
 
 // Finger 根据协议分组
 type RuleSet struct {
-	Rules map[string][]*CompiledRule `yaml:"-"`
+	rules map[string][]*CompiledRule
 }
 
 func (f RuleSet) AddRules(rules []*Rule) {
@@ -53,14 +53,14 @@ func (f RuleSet) AddRules(rules []*Rule) {
 		for _, matcher := range runtime.Matchers {
 			_ = matcher.CompileMatchers()
 		}
-		f.Rules[rule.Service] = append(f.Rules[rule.Service], &CompiledRule{Source: rule, Runtime: runtime})
+		f.rules[rule.Service] = append(f.rules[rule.Service], &CompiledRule{Source: rule, Runtime: runtime})
 	}
 }
 
 // Match 执行指纹匹配并返回包含规则的匹配结果
 func (f RuleSet) Match(service string, getMatchPart MatchPartGetter) []*MatchResult {
 	var results = make([]*MatchResult, 0)
-	rules, ok := f.Rules[service]
+	rules, ok := f.rules[service]
 	if !ok {
 		gologger.Debug().Msgf("No rules found for %s", service)
 		return results
@@ -111,7 +111,28 @@ func cloneRule(source *Rule) *Rule {
 }
 
 func NewRuleSet() *RuleSet {
-	return &RuleSet{Rules: make(map[string][]*CompiledRule)}
+	return &RuleSet{rules: make(map[string][]*CompiledRule)}
+}
+
+// CategoryCount returns the number of rule categories in this immutable snapshot.
+func (f RuleSet) CategoryCount() int { return len(f.rules) }
+
+// RuleCount returns the total number of compiled rules in this immutable snapshot.
+func (f RuleSet) RuleCount() int {
+	count := 0
+	for _, rules := range f.rules {
+		count += len(rules)
+	}
+	return count
+}
+
+// FirstRule returns the first source rule in a category, if present.
+func (f RuleSet) FirstRule(name string) *Rule {
+	rules := f.rules[name]
+	if len(rules) == 0 {
+		return nil
+	}
+	return rules[0].Source
 }
 
 func (r *Rule) Match(getMatchPart MatchPartGetter) (bool, map[string]string) {

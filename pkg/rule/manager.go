@@ -2,32 +2,31 @@ package rule
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hexbay/appfinger/pkg/external/customrules"
 	"github.com/projectdiscovery/gologger"
 )
 
-// Manager 规则管理器，实现单例模式和热更新
+// Manager owns a sequence of immutable rules snapshots for one rule directory.
 type Manager struct {
-	ruleSet      *RuleSet
 	rulePath     string
-	lastLoadTime time.Time
-	mutex        sync.RWMutex
+	reloadMu     sync.Mutex
+	ruleSet      atomic.Pointer[RuleSet]
+	lastLoadTime atomic.Int64
 }
 
-// NewManager 创建一个新的规则管理器实例
-func NewManager() *Manager {
-	return &Manager{}
-}
-
-// NewManagerWithPath 创建一个新的规则管理器实例并加载指定路径的规则
-func NewManagerWithPath(path string) (*Manager, error) {
-	m := &Manager{}
-	err := m.LoadRules(path)
-	return m, err
+// NewManager loads the initial immutable rules snapshot from path.
+func NewManager(path string) (*Manager, error) {
+	m := &Manager{rulePath: path}
+	if err := m.ReloadRules(); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // LoadDefaultRules ensures the default rule repository exists and loads it.
@@ -36,68 +35,57 @@ func LoadDefaultRules(ctx context.Context) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewManagerWithPath(rulePath)
+	return NewManager(rulePath)
 }
 
-// LoadRules 加载规则库
-func (m *Manager) LoadRules(path string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	// 加载规则
-	ruleSet, err := ScanRuleDirectory(path)
+// ReloadRules loads and publishes a new immutable rules snapshot. A failed
+// reload leaves the last successfully loaded snapshot available to scanners.
+func (m *Manager) ReloadRules() error {
+	m.reloadMu.Lock()
+	defer m.reloadMu.Unlock()
+
+	validationErrors, err := ValidateRuleDirectory(m.rulePath)
 	if err != nil {
-		return fmt.Errorf("加载规则库失败: %v", err)
+		return fmt.Errorf("验证规则库失败: %w", err)
 	}
-	// 更新规则和路径
-	m.ruleSet = ruleSet
-	m.rulePath = path
-	m.lastLoadTime = time.Now()
-	gologger.Info().Msgf("Loaded rules from: %s rules: %d", path, len(m.ruleSet.Rules))
+	if len(validationErrors) > 0 {
+		return fmt.Errorf("验证规则库失败: %w", errors.Join(validationErrors...))
+	}
+
+	ruleSet, err := ScanRuleDirectory(m.rulePath)
+	if err != nil {
+		return fmt.Errorf("加载规则库失败: %w", err)
+	}
+	m.ruleSet.Store(ruleSet)
+	m.lastLoadTime.Store(time.Now().UnixNano())
+	gologger.Info().Msgf("Loaded rules from: %s rules: %d", m.rulePath, ruleSet.CategoryCount())
 	return nil
 }
 
-// GetRuleSet returns the latest immutable rule snapshot.
-func (m *Manager) GetRuleSet() *RuleSet {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	return m.ruleSet
+// Snapshot returns the latest immutable rules snapshot.
+func (m *Manager) Snapshot() *RuleSet {
+	return m.ruleSet.Load()
 }
 
-// ReloadRules 重新加载规则库
-func (m *Manager) ReloadRules() error {
-	if m.rulePath == "" {
-		return fmt.Errorf("未设置规则库路径")
-	}
-	return m.LoadRules(m.rulePath)
-}
-
-// GetLastLoadTime 获取最后加载时间
+// GetLastLoadTime returns when the current snapshot was published.
 func (m *Manager) GetLastLoadTime() time.Time {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	return m.lastLoadTime
+	nanos := m.lastLoadTime.Load()
+	if nanos == 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, nanos)
 }
 
-// IsLoaded 判断规则库是否已加载
+// IsLoaded reports whether a rules snapshot is available.
 func (m *Manager) IsLoaded() bool {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	return m.ruleSet != nil
+	return m.Snapshot() != nil
 }
 
-// FindRuleByName 根据名称查找规则
+// FindRuleByName returns the first source rule in a category, if present.
 func (m *Manager) FindRuleByName(name string) *Rule {
-	if !m.IsLoaded() {
+	snapshot := m.Snapshot()
+	if snapshot == nil {
 		return nil
 	}
-
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
-	// 查找指定名称的规则
-	if rules, ok := m.ruleSet.Rules[name]; ok && len(rules) > 0 {
-		return rules[0].Source // 返回第一个匹配的规则
-	}
-
-	return nil
+	return snapshot.FirstRule(name)
 }

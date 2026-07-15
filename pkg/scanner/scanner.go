@@ -32,23 +32,29 @@ type Component struct {
 }
 
 type Config struct {
-	Fetcher *fetch.Fetcher
-	Rules   *rule.RuleSet
+	Fetcher      *fetch.Fetcher
+	RuleProvider RuleSnapshotProvider
+}
+
+// RuleSnapshotProvider returns the current immutable rules snapshot.
+// Implementations must not mutate a snapshot after returning it.
+type RuleSnapshotProvider interface {
+	Snapshot() *rule.RuleSet
 }
 
 type Scanner struct {
-	fetcher *fetch.Fetcher
-	rules   *rule.RuleSet
+	fetcher      *fetch.Fetcher
+	ruleProvider RuleSnapshotProvider
 }
 
 func New(config Config) (*Scanner, error) {
 	if config.Fetcher == nil {
 		return nil, fmt.Errorf("scanner fetcher is required")
 	}
-	if config.Rules == nil {
-		return nil, fmt.Errorf("scanner rules are required")
+	if config.RuleProvider == nil || config.RuleProvider.Snapshot() == nil {
+		return nil, fmt.Errorf("scanner rule provider with a rules snapshot is required")
 	}
-	return &Scanner{fetcher: config.Fetcher, rules: config.Rules}, nil
+	return &Scanner{fetcher: config.Fetcher, ruleProvider: config.RuleProvider}, nil
 }
 
 func (s *Scanner) Scan(ctx context.Context, target string) (*Result, error) {
@@ -56,11 +62,14 @@ func (s *Scanner) Scan(ctx context.Context, target string) (*Result, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	finger := s.ruleProvider.Snapshot()
+	if finger == nil {
+		return nil, fmt.Errorf("scanner rules are unavailable")
+	}
 	banners, err := s.collect(ctx, target)
 	if err != nil {
 		return nil, err
 	}
-	finger := s.rules
 	components, plugins := matchBanners(finger, banners)
 	if _, ok := components["honeypot"]; ok {
 		components = map[string]map[string]string{"honeypot": {}}

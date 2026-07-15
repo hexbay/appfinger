@@ -67,17 +67,14 @@ func main() {
 		}
 
 		// 如果严格校验通过，再按运行时逻辑加载一次规则，确保整体 Finger 可以正常建立
-		manager := rule.NewManager()
-		if err := manager.LoadRules(options.FingerHome); err != nil {
+		manager, err := rule.NewManager(options.FingerHome)
+		if err != nil {
 			gologger.Error().Msgf("validate rules failed on load: %s", err.Error())
 			os.Exit(1)
 		}
 		// 计算规则总数
-		totalRules := 0
-		for _, rules := range manager.GetRuleSet().Rules {
-			totalRules += len(rules)
-		}
-		gologger.Info().Msgf("Validate success: loaded %d rule categories with %d total rules", len(manager.GetRuleSet().Rules), totalRules)
+		snapshot := manager.Snapshot()
+		gologger.Info().Msgf("Validate success: loaded %d rule categories with %d total rules", snapshot.CategoryCount(), snapshot.RuleCount())
 		return
 	}
 	fetchOptions := fetch.DefaultOption()
@@ -96,19 +93,15 @@ func main() {
 		gologger.Error().Msgf("init default rules failed: %s", err.Error())
 		os.Exit(1)
 	}
-	manager := rule.NewManager()
-	err = manager.LoadRules(options.FingerHome)
+	manager, err := rule.NewManager(options.FingerHome)
 	if err != nil {
 		gologger.Print().Msgf(err.Error())
 		return
 	}
 	// 计算规则总数
-	totalRules := 0
-	for _, rules := range manager.GetRuleSet().Rules {
-		totalRules += len(rules)
-	}
-	gologger.Info().Msgf("Loaded %d rule categories with %d total rules", len(manager.GetRuleSet().Rules), totalRules)
-	appScanner, err := scanner.New(scanner.Config{Fetcher: fetcherClient, Rules: manager.GetRuleSet()})
+	snapshot := manager.Snapshot()
+	gologger.Info().Msgf("Loaded %d rule categories with %d total rules", snapshot.CategoryCount(), snapshot.RuleCount())
+	appScanner, err := scanner.New(scanner.Config{Fetcher: fetcherClient, RuleProvider: manager})
 	if err != nil {
 		gologger.Print().Msgf(err.Error())
 		return

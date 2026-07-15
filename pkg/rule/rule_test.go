@@ -119,9 +119,7 @@ func TestLoadRule(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	for name, rules := range finger.Rules {
-		t.Log("load", name, "rules:", len(rules))
-	}
+	t.Log("loaded rule categories:", finger.CategoryCount(), "total rules:", finger.RuleCount())
 }
 
 func TestRuleMatchFtp(t *testing.T) {
