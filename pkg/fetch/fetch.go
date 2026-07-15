@@ -44,9 +44,10 @@ func (c *Fetcher) initClient() {
 			}
 		}
 		opts := retryablehttp.Options{
-			RetryWaitMin:  1 * time.Second,
-			RetryWaitMax:  30 * time.Second,
-			RetryMax:      c.options.RetryMax,
+			RetryWaitMin: 1 * time.Second,    // 单次重试前的最小等待时间。
+			RetryWaitMax: 30 * time.Second,   // 单次重试前的最大等待时间。
+			RetryMax:     c.options.RetryMax, // 最大重试次数，来自 fetch.Options/CLI 配置。
+			// 重试前最多读取并丢弃 4KB 响应体，让连接有机会复用，同时避免 drain 大响应。
 			RespReadLimit: 4096,
 			// 请求超时由 RequestOnce/readICON 根据调用方 ctx 和 Options.Timeout 控制，
 			// 避免 retryablehttp 的 client-level timeout 抢先截断外部传入的 deadline。
@@ -55,7 +56,8 @@ func (c *Fetcher) initClient() {
 			KillIdleConn: false,
 			// client-level timeout 已关闭，禁用 retryablehttp 的自动 timeout 调整逻辑。
 			NoAdjustTimeout: true,
-			HttpClient:      &http.Client{Transport: transport},
+			// 使用上面配置了连接池、proxy 和标准 Dialer 的 http client。
+			HttpClient: &http.Client{Transport: transport},
 		}
 		c.httpClient = retryablehttp.NewClient(opts)
 	})
