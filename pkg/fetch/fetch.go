@@ -9,74 +9,86 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 )
 
 // Fetcher 定义HTTP探测和Banner采集的核心结构。
 type Fetcher struct {
-	options      *Options
-	httpClient   *retryablehttp.Client
-	clientInitMu sync.Once
+	options    *Options
+	httpClient *retryablehttp.Client
 }
 
 // NewFetcher creates a Fetcher. Prefer this constructor for the public fetch API.
-func NewFetcher(options *Options) *Fetcher {
-	if options == nil {
-		options = DefaultOption()
-	}
-	c := &Fetcher{options: options}
-	c.initClient()
-	return c
-}
 
-// initClient 初始化HTTP客户端
-func (c *Fetcher) initClient() {
-	c.clientInitMu.Do(func() {
-		opts := retryablehttp.Options{
-			RetryWaitMin: 1 * time.Second,           // 单次重试前的最小等待时间。
-			RetryWaitMax: 30 * time.Second,          // 单次重试前的最大等待时间。
-			RetryMax:     max(0, c.options.Retries), // 失败后的额外重试次数。
-			// 重试前最多读取并丢弃 4KB 响应体，让连接有机会复用，同时避免 drain 大响应。
-			RespReadLimit: 4096,
-			// 请求超时由 RequestOnce/readICON 根据调用方 ctx 和 Options.Timeout 控制，
-			// 避免 retryablehttp 的 client-level timeout 抢先截断外部传入的 deadline。
-			Timeout: 0,
-			// 这里使用可复用连接池，不能沿用 host spraying 场景的 idle 连接关闭策略。
-			KillIdleConn: false,
-			// client-level timeout 已关闭，禁用 retryablehttp 的自动 timeout 调整逻辑。
-			NoAdjustTimeout: true,
-			// 使用 appfinger 默认 client，或调用方注入的自定义 client。
-			HttpClient: c.buildBaseHTTPClient(),
-		}
-		c.httpClient = retryablehttp.NewClient(opts)
+func NewFetcher(options *Options) (*Fetcher, error) {
+	normalized, err := normalizeOptions(options)
+	if err != nil {
+		return nil, err
+	}
+	baseClient, err := buildHTTPClient(normalized)
+	if err != nil {
+		return nil, err
+	}
+	client := retryablehttp.NewClient(retryablehttp.Options{
+		RetryWaitMin: 1 * time.Second,    // 单次重试前的最小等待时间。
+		RetryWaitMax: 30 * time.Second,   // 单次重试前的最大等待时间。
+		RetryMax:     normalized.Retries, // 失败后的额外重试次数。
+		// 重试前最多读取并丢弃 4KB 响应体，让连接有机会复用，同时避免 drain 大响应。
+		RespReadLimit: 4096,
+		// 请求超时由 RequestOnce/readICON 根据调用方 ctx 和 Options.Timeout 控制，
+		// 避免 retryablehttp 的 client-level timeout 抢先截断外部传入的 deadline。
+		Timeout: 0,
+		// 这里使用可复用连接池，不能沿用 host spraying 场景的 idle 连接关闭策略。
+		KillIdleConn: false,
+		// client-level timeout 已关闭，禁用 retryablehttp 的自动 timeout 调整逻辑。
+		NoAdjustTimeout: true,
+		// 使用 appfinger 默认 client，或调用方注入的自定义 client。
+		HttpClient: baseClient,
 	})
+	return &Fetcher{options: normalized, httpClient: client}, nil
 }
 
-func (c *Fetcher) buildBaseHTTPClient() *http.Client {
-	if c.options.HTTPClient != nil {
-		return c.options.HTTPClient
+func normalizeOptions(options *Options) (*Options, error) {
+	result := DefaultOption()
+	if options != nil {
+		*result = *options
 	}
-	if c.options.Transport != nil {
-		return &http.Client{Transport: c.options.Transport}
+	if result.Timeout < 0 {
+		return nil, fmt.Errorf("timeout must not be negative")
 	}
-
-	transport := retryablehttp.DefaultReusePooledTransport()
-	// 使用标准 Dialer 让连接建立阶段受 request ctx 取消/超时控制，
-	// 避免 fastdialer 默认拨号超时覆盖 Options.Timeout。
-	transport.DialContext = (&net.Dialer{}).DialContext
-	// 清空 retryablehttp 默认注入的 fastdialer TLS 拨号路径，让 HTTPS 也走标准 DialContext。
-	transport.DialTLSContext = nil
-	if c.options.Timeout > 0 {
-		transport.TLSHandshakeTimeout = c.options.Timeout
+	if result.Retries < 0 {
+		return nil, fmt.Errorf("retries must not be negative")
 	}
-	if c.options.Proxy != "" {
-		proxyURL, proxyErr := url.Parse(c.options.Proxy)
-		transport.Proxy = func(request *http.Request) (*url.URL, error) {
-			return proxyURL, proxyErr
+	if result.Proxy != "" {
+		u, err := url.Parse(result.Proxy)
+		if err != nil || u.Scheme == "" || u.Host == "" {
+			return nil, fmt.Errorf("invalid proxy URL %q", result.Proxy)
 		}
 	}
-	return &http.Client{Transport: transport}
+	return result, nil
+}
+
+func buildHTTPClient(options *Options) (*http.Client, error) {
+	if options.HTTPClient != nil {
+		return options.HTTPClient, nil
+	}
+	if options.Transport != nil {
+		return &http.Client{Transport: options.Transport}, nil
+	}
+	transport := retryablehttp.DefaultReusePooledTransport()
+	transport.DialContext = (&net.Dialer{}).DialContext
+	transport.DialTLSContext = nil
+	if options.Timeout > 0 {
+		transport.TLSHandshakeTimeout = options.Timeout
+	}
+	if options.Proxy != "" {
+		proxyURL, err := url.Parse(options.Proxy)
+		if err != nil {
+			return nil, err
+		}
+		transport.Proxy = http.ProxyURL(proxyURL)
+	}
+	return &http.Client{Transport: transport}, nil
 }
 
 // GetBanners 实现BannerProvider接口

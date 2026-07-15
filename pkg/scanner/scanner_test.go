@@ -21,7 +21,9 @@ func TestScannerReturnsStructuredResult(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("demo")) }))
 	defer ts.Close()
-	s, err := New(Config{Fetcher: fetch.NewFetcher(fetch.DefaultOption()), Rules: rules})
+	fetcher, err := fetch.NewFetcher(fetch.DefaultOption())
+	require.NoError(t, err)
+	s, err := New(Config{Fetcher: fetcher, Rules: rules})
 	require.NoError(t, err)
 	result, err := s.Scan(context.Background(), ts.URL)
 	require.NoError(t, err)

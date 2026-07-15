@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFetcherFollowsRedirect(t *testing.T) {
@@ -21,7 +22,9 @@ func TestFetcherFollowsRedirect(t *testing.T) {
 		_, _ = w.Write([]byte("<title>final</title><body>ok</body>"))
 	}))
 	defer ts.Close()
-	b, err := NewFetcher(DefaultOption()).GetBanner(context.Background(), ts.URL)
+	f, err := NewFetcher(DefaultOption())
+	require.NoError(t, err)
+	b, err := f.GetBanner(context.Background(), ts.URL)
 	assert.NoError(t, err)
 	assert.Equal(t, "final", b.Title)
 }
@@ -32,7 +35,9 @@ func TestFetcherOptions(t *testing.T) {
 	o.DisableJavaScript = true
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(strings.Repeat("a", 128))) }))
 	defer ts.Close()
-	b, err := NewFetcher(o).GetBanner(context.Background(), ts.URL)
+	f, err := NewFetcher(o)
+	require.NoError(t, err)
+	b, err := f.GetBanner(context.Background(), ts.URL)
 	assert.NoError(t, err)
 	assert.Len(t, b.Body, 16)
 }
@@ -40,7 +45,9 @@ func TestFetcherOptions(t *testing.T) {
 func TestFetcherHonorsCanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := NewFetcher(DefaultOption()).GetBanner(ctx, "http://127.0.0.1:1")
+	f, err := NewFetcher(DefaultOption())
+	require.NoError(t, err)
+	_, err = f.GetBanner(ctx, "http://127.0.0.1:1")
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, context.Canceled))
 }
@@ -52,7 +59,9 @@ func TestFetcherUsesRequestTimeoutWithParentDeadline(t *testing.T) {
 	o.Timeout = 20 * time.Millisecond
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err := NewFetcher(o).GetBanner(ctx, ts.URL)
+	f, err := NewFetcher(o)
+	require.NoError(t, err)
+	_, err = f.GetBanner(ctx, ts.URL)
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
 
@@ -65,7 +74,9 @@ func TestReadIconClosesNonOKResponse(t *testing.T) {
 		_, _ = w.Write([]byte(`<html><link rel="icon" href="/favicon.ico"></html>`))
 	}))
 	defer ts.Close()
-	b, err := NewFetcher(DefaultOption()).GetBanner(context.Background(), ts.URL)
+	f, err := NewFetcher(DefaultOption())
+	require.NoError(t, err)
+	b, err := f.GetBanner(context.Background(), ts.URL)
 	assert.NoError(t, err)
 	assert.Zero(t, b.IconHash)
 }

@@ -87,13 +87,17 @@ func main() {
 	fetchOptions.DisableJavaScript = options.DisableJavaScript
 	fetchOptions.Timeout = time.Duration(options.Timeout) * time.Second
 	fetchOptions.Proxy = options.Proxy
-	fetcherClient := fetch.NewFetcher(fetchOptions)
+	fetcherClient, err := fetch.NewFetcher(fetchOptions)
+	if err != nil {
+		gologger.Error().Msgf("init fetcher failed: %s", err)
+		return
+	}
 	if err := ensureDefaultRules(context.Background(), options.FingerHome); err != nil {
 		gologger.Error().Msgf("init default rules failed: %s", err.Error())
 		os.Exit(1)
 	}
 	manager := rule.NewManager()
-	err := manager.LoadRules(options.FingerHome)
+	err = manager.LoadRules(options.FingerHome)
 	if err != nil {
 		gologger.Print().Msgf(err.Error())
 		return
