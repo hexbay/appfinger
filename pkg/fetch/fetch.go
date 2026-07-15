@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-	"time"
 )
 
 // Fetcher 定义HTTP探测和Banner采集的核心结构。
@@ -38,9 +37,7 @@ func (c *Fetcher) initClient() {
 		opts.KillIdleConn = false
 		opts.RetryMax = c.options.RetryMax
 		transport := retryablehttp.DefaultReusePooledTransport()
-		transport.DialContext = (&net.Dialer{
-			KeepAlive: 10 * time.Second,
-		}).DialContext
+		transport.DialContext = (&net.Dialer{}).DialContext
 		if c.options.Proxy != "" {
 			proxyURL, proxyErr := url.Parse(c.options.Proxy)
 			transport.Proxy = func(request *http.Request) (*url.URL, error) {
