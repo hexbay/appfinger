@@ -1,6 +1,9 @@
 package fetch
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 const (
 	DefaultMaxBodySize int64 = 5 * 1024 * 1024
@@ -17,6 +20,12 @@ type Options struct {
 	MaxIconSize       int64
 	Timeout           time.Duration
 	RetryMax          int // 重试次数
+	// HTTPClient allows SDK users to provide a fully configured client.
+	// When set, appfinger uses it as-is and does not mutate transport settings.
+	HTTPClient *http.Client
+	// Transport allows SDK users to provide custom transport-level behavior.
+	// When set, appfinger wraps it in an http.Client and does not mutate it.
+	Transport *http.Transport
 }
 
 func DefaultOption() *Options {

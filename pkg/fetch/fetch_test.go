@@ -122,6 +122,46 @@ func TestFetcherDialUsesRequestContext(t *testing.T) {
 	assert.NotNil(t, transport.DialContext)
 }
 
+func TestFetcherHTTPSDialUsesStandardTransportTimeouts(t *testing.T) {
+	options := DefaultOption()
+	options.Timeout = 150 * time.Millisecond
+	fetcher := NewFetcher(options)
+
+	transport, ok := fetcher.GetClient().HTTPClient.Transport.(*http.Transport)
+
+	assert.True(t, ok)
+	assert.NotNil(t, transport.DialContext)
+	assert.Nil(t, transport.DialTLSContext)
+	assert.Equal(t, options.Timeout, transport.TLSHandshakeTimeout)
+}
+
+func TestFetcherUsesCustomHTTPClientAsIs(t *testing.T) {
+	customClient := &http.Client{}
+	options := DefaultOption()
+	options.HTTPClient = customClient
+	options.Transport = &http.Transport{}
+
+	fetcher := NewFetcher(options)
+
+	assert.Same(t, customClient, fetcher.GetClient().HTTPClient)
+	assert.Nil(t, customClient.Transport)
+}
+
+func TestFetcherUsesCustomTransportAsIs(t *testing.T) {
+	customTransport := &http.Transport{
+		DisableKeepAlives: true,
+	}
+	options := DefaultOption()
+	options.Transport = customTransport
+	options.Proxy = "http://127.0.0.1:8080"
+
+	fetcher := NewFetcher(options)
+
+	assert.Same(t, customTransport, fetcher.GetClient().HTTPClient.Transport)
+	assert.True(t, customTransport.DisableKeepAlives)
+	assert.Nil(t, customTransport.Proxy)
+}
+
 func TestRequestOnceExternalDeadlineOverridesOptionsTimeout(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ok"))

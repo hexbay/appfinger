@@ -33,16 +33,7 @@ func NewFetcher(options *Options) *Fetcher {
 // initClient 初始化HTTP客户端
 func (c *Fetcher) initClient() {
 	c.clientInitMu.Do(func() {
-		transport := retryablehttp.DefaultReusePooledTransport()
-		// 使用标准 Dialer 让连接建立阶段受 request ctx 取消/超时控制，
-		// 避免 fastdialer 默认拨号超时覆盖 Options.Timeout。
-		transport.DialContext = (&net.Dialer{}).DialContext
-		if c.options.Proxy != "" {
-			proxyURL, proxyErr := url.Parse(c.options.Proxy)
-			transport.Proxy = func(request *http.Request) (*url.URL, error) {
-				return proxyURL, proxyErr
-			}
-		}
+		httpClient := c.buildHTTPClient()
 		opts := retryablehttp.Options{
 			RetryWaitMin: 1 * time.Second,    // 单次重试前的最小等待时间。
 			RetryWaitMax: 30 * time.Second,   // 单次重试前的最大等待时间。
@@ -56,11 +47,37 @@ func (c *Fetcher) initClient() {
 			KillIdleConn: false,
 			// client-level timeout 已关闭，禁用 retryablehttp 的自动 timeout 调整逻辑。
 			NoAdjustTimeout: true,
-			// 使用上面配置了连接池、proxy 和标准 Dialer 的 http client。
-			HttpClient: &http.Client{Transport: transport},
+			// 使用 appfinger 默认 client，或调用方注入的自定义 client。
+			HttpClient: httpClient,
 		}
 		c.httpClient = retryablehttp.NewClient(opts)
 	})
+}
+
+func (c *Fetcher) buildHTTPClient() *http.Client {
+	if c.options.HTTPClient != nil {
+		return c.options.HTTPClient
+	}
+	if c.options.Transport != nil {
+		return &http.Client{Transport: c.options.Transport}
+	}
+
+	transport := retryablehttp.DefaultReusePooledTransport()
+	// 使用标准 Dialer 让连接建立阶段受 request ctx 取消/超时控制，
+	// 避免 fastdialer 默认拨号超时覆盖 Options.Timeout。
+	transport.DialContext = (&net.Dialer{}).DialContext
+	// 清空 retryablehttp 默认注入的 fastdialer TLS 拨号路径，让 HTTPS 也走标准 DialContext。
+	transport.DialTLSContext = nil
+	if c.options.Timeout > 0 {
+		transport.TLSHandshakeTimeout = c.options.Timeout
+	}
+	if c.options.Proxy != "" {
+		proxyURL, proxyErr := url.Parse(c.options.Proxy)
+		transport.Proxy = func(request *http.Request) (*url.URL, error) {
+			return proxyURL, proxyErr
+		}
+	}
+	return &http.Client{Transport: transport}
 }
 
 // GetClient 获取HTTP客户端
