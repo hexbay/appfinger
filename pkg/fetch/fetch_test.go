@@ -95,6 +95,23 @@ func TestRequestOnceHonorsCanceledContext(t *testing.T) {
 	assert.True(t, errors.Is(err, context.Canceled), "expected context canceled, got %v", err)
 }
 
+func TestNewFetcherUsesDefaultOptionsWhenNil(t *testing.T) {
+	fetcher := NewFetcher(nil)
+
+	assert.NotNil(t, fetcher.GetClient())
+	assert.Equal(t, DefaultOption().Timeout, fetcher.options.Timeout)
+}
+
+func TestFetcherUsesReusableTransport(t *testing.T) {
+	fetcher := NewFetcher(DefaultOption())
+
+	transport, ok := fetcher.GetClient().HTTPClient.Transport.(*http.Transport)
+
+	assert.True(t, ok)
+	assert.False(t, transport.DisableKeepAlives)
+	assert.Greater(t, transport.MaxIdleConnsPerHost, 0)
+}
+
 func TestFetcherDialUsesRequestContext(t *testing.T) {
 	options := DefaultOption()
 	options.Timeout = 150 * time.Millisecond

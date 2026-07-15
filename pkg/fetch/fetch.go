@@ -22,6 +22,9 @@ type Fetcher struct {
 
 // NewFetcher 创建新的Fetcher实例。
 func NewFetcher(options *Options) *Fetcher {
+	if options == nil {
+		options = DefaultOption()
+	}
 	c := &Fetcher{options: options}
 	c.initClient()
 	return c
@@ -32,19 +35,19 @@ func (c *Fetcher) initClient() {
 	c.clientInitMu.Do(func() {
 		opts := retryablehttp.DefaultOptionsSpraying
 		opts.Timeout = 0
-		opts.KillIdleConn = true
+		opts.KillIdleConn = false
 		opts.RetryMax = c.options.RetryMax
 		transport := retryablehttp.DefaultReusePooledTransport()
 		transport.DialContext = (&net.Dialer{
 			KeepAlive: 10 * time.Second,
 		}).DialContext
 		if c.options.Proxy != "" {
+			proxyURL, proxyErr := url.Parse(c.options.Proxy)
 			transport.Proxy = func(request *http.Request) (*url.URL, error) {
-				return url.Parse(c.options.Proxy)
+				return proxyURL, proxyErr
 			}
 		}
-		opts.HttpClient = retryablehttp.DefaultClient()
-		opts.HttpClient.Transport = transport
+		opts.HttpClient = &http.Client{Transport: transport}
 		c.httpClient = retryablehttp.NewClient(opts)
 	})
 }
