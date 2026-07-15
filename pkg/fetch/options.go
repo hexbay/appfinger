@@ -19,7 +19,7 @@ type Options struct {
 	MaxBodySize       int64
 	MaxIconSize       int64
 	Timeout           time.Duration
-	RetryMax          int // 重试次数
+	Retries           int // 失败后的额外重试次数，默认 0
 	// HTTPClient allows SDK users to provide a fully configured client.
 	// When set, appfinger uses it as-is and does not mutate transport settings.
 	HTTPClient *http.Client
@@ -38,7 +38,7 @@ func DefaultOption() *Options {
 		MaxBodySize:       DefaultMaxBodySize,
 		MaxIconSize:       DefaultMaxIconSize,
 		Timeout:           6 * time.Second,
-		RetryMax:          1,
+		Retries:           0,
 	}
 
 }

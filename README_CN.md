@@ -138,7 +138,7 @@ import (
 
 	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
-	"github.com/hexbay/appfinger/pkg/runner"
+	"github.com/hexbay/appfinger/pkg/scanner"
 )
 
 func main() {
@@ -151,16 +151,11 @@ func main() {
 		panic(err)
 	}
 
-	r, err := runner.NewRunner(fetcher, manager, &runner.Options{
-		Threads: 10,
-		Timeout: 10,
-	})
+	r, err := scanner.New(scanner.Config{Fetcher: fetcher, Rules: manager.GetFinger()})
 	if err != nil {
 		panic(err)
 	}
-	defer r.Close()
-
-	result, err := r.Scan("https://example.com")
+	result, err := r.Scan(context.Background(), "https://example.com")
 	if err != nil {
 		panic(err)
 	}
@@ -169,9 +164,8 @@ func main() {
 }
 ```
 
-使用 `runner.NewRunner` 并显式传入 `fetch.Fetcher` 时，HTTP 行为由
-`fetch.Options` 控制，例如超时、代理、favicon 获取、JavaScript 跳转解析和响应大小限制。
-`runner.Options` 主要控制目标枚举、并发、回调和输出行为。
+公共扫描 API 是 `scanner.New` 和 `Scanner.Scan`。HTTP 行为由
+`fetch.Options` 控制；目标枚举和输出由 CLI 内部的 `enumerate`、`report` 包负责。
 
 ## 🔎 工作原理
 

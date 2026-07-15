@@ -20,7 +20,7 @@ type Fetcher struct {
 	clientInitMu sync.Once
 }
 
-// NewFetcher 创建新的Fetcher实例。
+// NewFetcher creates a Fetcher. Prefer this constructor for the public fetch API.
 func NewFetcher(options *Options) *Fetcher {
 	if options == nil {
 		options = DefaultOption()
@@ -34,9 +34,9 @@ func NewFetcher(options *Options) *Fetcher {
 func (c *Fetcher) initClient() {
 	c.clientInitMu.Do(func() {
 		opts := retryablehttp.Options{
-			RetryWaitMin: 1 * time.Second,    // 单次重试前的最小等待时间。
-			RetryWaitMax: 30 * time.Second,   // 单次重试前的最大等待时间。
-			RetryMax:     c.options.RetryMax, // 最大重试次数，来自 fetch.Options/CLI 配置。
+			RetryWaitMin: 1 * time.Second,           // 单次重试前的最小等待时间。
+			RetryWaitMax: 30 * time.Second,          // 单次重试前的最大等待时间。
+			RetryMax:     max(0, c.options.Retries), // 失败后的额外重试次数。
 			// 重试前最多读取并丢弃 4KB 响应体，让连接有机会复用，同时避免 drain 大响应。
 			RespReadLimit: 4096,
 			// 请求超时由 RequestOnce/readICON 根据调用方 ctx 和 Options.Timeout 控制，
@@ -79,7 +79,10 @@ func (c *Fetcher) buildBaseHTTPClient() *http.Client {
 	return &http.Client{Transport: transport}
 }
 
-// GetClient 获取HTTP客户端
+// GetClient exposes the internal retryable HTTP client for compatibility.
+// New code should use GetBanner or GetBanners instead.
+//
+// Deprecated: direct client access couples callers to retryablehttp.
 func (c *Fetcher) GetClient() *retryablehttp.Client {
 	c.initClient()
 	return c.httpClient

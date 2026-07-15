@@ -138,7 +138,7 @@ import (
 
 	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
-	"github.com/hexbay/appfinger/pkg/runner"
+	"github.com/hexbay/appfinger/pkg/scanner"
 )
 
 func main() {
@@ -151,16 +151,11 @@ func main() {
 		panic(err)
 	}
 
-	r, err := runner.NewRunner(fetcher, manager, &runner.Options{
-		Threads: 10,
-		Timeout: 10,
-	})
+	r, err := scanner.New(scanner.Config{Fetcher: fetcher, Rules: manager.GetFinger()})
 	if err != nil {
 		panic(err)
 	}
-	defer r.Close()
-
-	result, err := r.Scan("https://example.com")
+	result, err := r.Scan(context.Background(), "https://example.com")
 	if err != nil {
 		panic(err)
 	}
@@ -169,10 +164,13 @@ func main() {
 }
 ```
 
-When using `runner.NewRunner` with an explicit `fetch.Fetcher`, HTTP behavior
-such as timeout, proxy, icon fetching, JavaScript redirect parsing, and response
-size limits is controlled by `fetch.Options`. `runner.Options` controls target
-enumeration, concurrency, callbacks, and output behavior.
+The public scanning API is `scanner.New` and `Scanner.Scan`. HTTP behavior is
+configured only through `fetch.Options`: `Timeout` is the timeout for one HTTP
+request chain and `Retries` is the number of additional attempts after a
+failure. `Retries` defaults to `0`. The same request context is used for the
+retry chain, so its maximum duration is bounded by the configured timeout
+(unless the caller's context has an earlier deadline). Target enumeration and
+output are separate concerns handled by the CLI's internal `enumerate` and `report` packages.
 
 ## 🔎 How It Works
 

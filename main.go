@@ -11,12 +11,12 @@ import (
 	"github.com/hexbay/appfinger/pkg/external/customrules"
 	"github.com/hexbay/appfinger/pkg/fetch"
 	"github.com/hexbay/appfinger/pkg/rule"
-	"github.com/hexbay/appfinger/pkg/runner"
+	"github.com/hexbay/appfinger/pkg/scanner"
 	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/gologger/levels"
 )
 
-const Version = "v0.3.4"
+const Version = "dev"
 
 var Banner = fmt.Sprintf(`
 ______          %s             ________  __                                         
@@ -67,7 +67,7 @@ func main() {
 		}
 
 		// 如果严格校验通过，再按运行时逻辑加载一次规则，确保整体 Finger 可以正常建立
-		manager := rule.GetRuleManager()
+		manager := rule.NewManager()
 		if err := manager.LoadRules(options.FingerHome); err != nil {
 			gologger.Error().Msgf("validate rules failed on load: %s", err.Error())
 			os.Exit(1)
@@ -92,7 +92,7 @@ func main() {
 		gologger.Error().Msgf("init default rules failed: %s", err.Error())
 		os.Exit(1)
 	}
-	manager := rule.GetRuleManager()
+	manager := rule.NewManager()
 	err := manager.LoadRules(options.FingerHome)
 	if err != nil {
 		gologger.Print().Msgf(err.Error())
@@ -104,37 +104,26 @@ func main() {
 		totalRules += len(rules)
 	}
 	gologger.Info().Msgf("Loaded %d rule categories with %d total rules", len(manager.GetFinger().Rules), totalRules)
-	// 将cli.Options转换为runner.Options
-	runnerOptions := &runner.Options{
-		// 输入相关
-		Targets: options.URL,
-		File:    options.UrlFile,
-		Stdin:   options.Stdin,
-		// 运行相关
-		Threads:  options.Threads,
-		Timeout:  options.Timeout,
-		Verbose:  options.Debug,
-		Silent:   false,
-		RulePath: options.FingerHome,
-
-		// 输出相关
-		Output:    options.OutputFile,
-		JSON:      options.OutputType == "json",
-		NoColor:   false,
-		OutputAll: true,
-	}
-
-	appRunner, err := runner.NewRunner(fetcherClient, manager, runnerOptions)
+	appScanner, err := scanner.New(scanner.Config{Fetcher: fetcherClient, Rules: manager.GetFinger()})
 	if err != nil {
 		gologger.Print().Msgf(err.Error())
 		return
 	}
-	defer func() {
-		if err := appRunner.Close(); err != nil {
-			gologger.Warning().Msgf(err.Error())
-		}
-	}()
-	err = appRunner.Enumerate()
+	var output *cli.Reporter
+	if options.OutputFile != "" {
+		output, err = cli.NewFileReporter(options.OutputFile, options.OutputType == "json")
+	} else {
+		output, err = cli.NewReporter(cli.ReporterConfig{JSON: options.OutputType == "json"})
+	}
+	if err != nil {
+		gologger.Error().Msgf(err.Error())
+		return
+	}
+	defer output.Close()
+	enum, err := cli.NewEnumerator(cli.TargetConfig{Targets: options.URL, File: options.UrlFile, Stdin: options.Stdin, Workers: options.Threads}, appScanner)
+	if err == nil {
+		err = enum.Run(context.Background(), output.Write)
+	}
 	if err != nil {
 		gologger.Error().Msgf(err.Error())
 		return

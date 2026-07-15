@@ -246,8 +246,9 @@ func isRedirectStatus(statusCode int) bool {
 // RequestOnce performs one HTTP request cycle and returns a banner plus a
 // client-side redirect URL when one is detected.
 //
-// Deprecated: prefer Fetcher.GetBanners or Fetcher.GetBanner for stable public
-// use. This low-level helper is kept for compatibility.
+// Deprecated: use Fetcher.GetBanner or Fetcher.GetBanners. This low-level
+// helper exposes the internal retryablehttp client and is retained only for
+// source compatibility.
 func RequestOnce(ctx context.Context, client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
 	requestOptions := DefaultOption()
 	if len(options) > 0 && options[0] != nil {
@@ -372,10 +373,11 @@ func contextWithOptionsTimeout(ctx context.Context, timeout time.Duration) (cont
 	if timeout <= 0 {
 		return ctx, nil
 	}
-	if _, ok := ctx.Deadline(); ok {
-		return ctx, nil
+	requestedDeadline := time.Now().Add(timeout)
+	if deadline, ok := ctx.Deadline(); ok && deadline.Before(requestedDeadline) {
+		return ctx, func() {}
 	}
-	return context.WithTimeout(ctx, timeout)
+	return context.WithDeadline(ctx, requestedDeadline)
 }
 
 func mmh3(data []byte) int32 {

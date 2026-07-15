@@ -85,7 +85,7 @@ func isHiddenDir(info os.FileInfo) bool {
 }
 
 // isValidMatcherPart checks whether the specified matcher part is supported by
-// the runtime banner adapter (runner.BannerAdapter.GetMatchPart).
+// the runtime banner adapter used by the scanner package.
 //
 // Supported values:
 //   - "" (will be normalized to body)

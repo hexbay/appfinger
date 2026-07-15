@@ -18,23 +18,6 @@ type Manager struct {
 	mutex        sync.RWMutex
 }
 
-var (
-	// 全局单例
-	defaultInstance *Manager
-	once            sync.Once
-	defaultRulePath string
-)
-
-// SetDefaultRulePath 设置默认规则库路径
-func SetDefaultRulePath(path string) {
-	defaultRulePath = path
-}
-
-// GetDefaultRulePath 获取默认规则库路径
-func GetDefaultRulePath() string {
-	return defaultRulePath
-}
-
 // NewManager 创建一个新的规则管理器实例
 func NewManager() *Manager {
 	return &Manager{}
@@ -54,21 +37,6 @@ func LoadDefaultRules(ctx context.Context) (*Manager, error) {
 		return nil, err
 	}
 	return NewManagerWithPath(rulePath)
-}
-
-// GetRuleManager 获取默认的规则管理器实例
-func GetRuleManager() *Manager {
-	once.Do(func() {
-		defaultInstance = &Manager{}
-		// 如果设置了默认路径，则自动加载
-		if defaultRulePath != "" {
-			err := defaultInstance.LoadRules(defaultRulePath)
-			if err != nil {
-				gologger.Warning().Msgf("加载默认规则库失败: %v", err)
-			}
-		}
-	})
-	return defaultInstance
 }
 
 // LoadRules 加载规则库

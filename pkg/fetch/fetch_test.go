@@ -162,22 +162,23 @@ func TestFetcherUsesCustomTransportAsIs(t *testing.T) {
 	assert.Nil(t, customTransport.Proxy)
 }
 
-func TestRequestOnceExternalDeadlineOverridesOptionsTimeout(t *testing.T) {
+func TestRequestOnceUsesShorterOptionsTimeoutThanParentDeadline(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
 		_, _ = w.Write([]byte("ok"))
 	}))
 	defer ts.Close()
 
 	options := DefaultOption()
-	options.Timeout = time.Nanosecond
+	options.Timeout = 20 * time.Millisecond
 	options.DisableJavaScript = true
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	banner, _, err := RequestOnce(ctx, NewFetcher(options).GetClient(), ts.URL, options)
 
-	assert.NoError(t, err)
-	assert.Equal(t, "ok", banner.Body)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Nil(t, banner)
 }
 
 func TestReadIconClosesNonOKResponse(t *testing.T) {
