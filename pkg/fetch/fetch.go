@@ -107,10 +107,7 @@ RedirectLoop:
 				break RedirectLoop
 			}
 			if c.options.DebugResp {
-				if banner.Certificate != "" {
-					fmt.Println("Dump Cert For " + banner.Uri + "\r\n" + banner.Certificate)
-				}
-				fmt.Println("Dump Response For " + banner.Uri + "\r\n" + banner.Response)
+				gologger.Debug().Msgf("response captured for %s", banner.Uri)
 			}
 			// 如果nextURI为空，则不再继续请求
 			if nextURI == "" {
@@ -136,7 +133,7 @@ RedirectLoop:
 			gologger.Debug().Msg(err.Error())
 		}
 		if c.options.DebugResp && finalBanner.IconHash > 0 {
-			gologger.Print().Msgf("Dump Icon For %s -> %d", finalBanner.IconURI, finalBanner.IconHash)
+			gologger.Debug().Msgf("icon captured for %s", finalBanner.IconURI)
 		}
 	}
 	return banners, nil
