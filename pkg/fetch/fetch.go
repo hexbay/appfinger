@@ -114,7 +114,7 @@ RedirectLoop:
 	}
 	if len(banners) == 0 {
 		if err != nil {
-			return nil, fmt.Errorf("get %s: %w", uri, err)
+			return nil, fmt.Errorf("get %s: %w: %w", uri, ErrFetch, err)
 		}
 		return nil, errors.New(fmt.Sprintf("Get %s Error!", uri))
 	}

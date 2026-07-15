@@ -260,7 +260,7 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 	var resp *http.Response
 	req, err := retryablehttp.NewRequest("GET", uri, nil)
 	if err != nil {
-		return banner, redirectURL, err
+		return banner, redirectURL, fmt.Errorf("%w: %v", ErrInvalidURL, err)
 	}
 	req = req.WithContext(ctx)
 	// 手动设置host，部分网站因为http 携带80 端口会被拦截 比如baidu.com
