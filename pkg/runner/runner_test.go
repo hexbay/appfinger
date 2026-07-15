@@ -30,7 +30,8 @@ func TestRunnerSSL(t *testing.T) {
 	}
 
 	_ = ruleManager.LoadRules(rulesDir)
-	runner := NewRunnerCompat(fetcherClient, ruleManager)
+	runner, err := NewRunner(fetcherClient, ruleManager, nil)
+	assert.NoError(t, err)
 	result, err := runner.Scan("https://www.hackerone.com")
 	assert.NoError(t, err)
 	if result != nil {
@@ -51,7 +52,8 @@ func TestRunnerWordPress(t *testing.T) {
 	}
 
 	_ = ruleManager.LoadRules(rulesDir)
-	runner := NewRunnerCompat(fetcherClient, ruleManager)
+	runner, err := NewRunner(fetcherClient, ruleManager, nil)
+	assert.NoError(t, err)
 	result, err := runner.Scan("https://cn.wordpress.org/")
 	assert.NoError(t, err)
 	if result != nil {
@@ -99,7 +101,8 @@ func TestRunnerPlugin(t *testing.T) {
 	// 创建Fetcher
 	fetcherClient := fetch.NewFetcher(fetch.DefaultOption())
 	// 创建Runner
-	runner := NewRunnerCompat(fetcherClient, ruleManager)
+	runner, err := NewRunner(fetcherClient, ruleManager, nil)
+	assert.NoError(t, err)
 	// 执行扫描
 	result, err := runner.Scan(ts.URL)
 	// 验证结果
@@ -121,7 +124,7 @@ func TestNewDoesNotMutateDefaultOptions(t *testing.T) {
 	assert.Nil(t, DefaultOptions.Callback)
 }
 
-func TestNewRunnerWithOptionsKeepsFetchDefaults(t *testing.T) {
+func TestNewKeepsFetchDefaults(t *testing.T) {
 	var requests atomic.Int32
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if requests.Add(1) == 1 {
@@ -134,7 +137,7 @@ func TestNewRunnerWithOptionsKeepsFetchDefaults(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	runner, err := NewRunnerWithOptions(&Options{Timeout: 5})
+	runner, err := New(WithTimeout(5))
 	assert.NoError(t, err)
 
 	banner, err := runner.fetcher.GetBanner(context.Background(), ts.URL)

@@ -11,7 +11,6 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/hexbay/appfinger/pkg/detectors/wordpress"
 	"github.com/hexbay/appfinger/pkg/fetch"
@@ -50,39 +49,6 @@ type Runner struct {
 	outputs     []io.Writer // 输出写入器
 	closers     []io.Closer // 需要关闭的输出资源
 	outputMu    sync.Mutex
-}
-
-// NewRunnerWithOptions 从选项创建Runner实例。
-//
-// Deprecated: prefer NewRunner with explicit fetcher and rule manager, or New
-// with functional options.
-func NewRunnerWithOptions(options *Options) (*Runner, error) {
-	// 如果没有提供选项，使用默认选项
-	if options == nil {
-		options = defaultOptions()
-	}
-
-	// 初始化Fetcher
-	fetchOptions := fetch.DefaultOption()
-	fetchOptions.Timeout = time.Duration(options.Timeout) * time.Second
-	fetcher := fetch.NewFetcher(fetchOptions)
-
-	// 初始化规则管理器
-	var ruleManager *rule.Manager
-	if options.RulePath != "" {
-		// 如果指定了规则库路径，使用指定路径创建规则管理器
-		var err error
-		ruleManager, err = rule.NewManagerWithPath(options.RulePath)
-		if err != nil {
-			return nil, fmt.Errorf("加载规则库失败: %v", err)
-		}
-	} else {
-		// 否则使用默认规则管理器
-		ruleManager = rule.GetRuleManager()
-	}
-
-	// 使用初始化后的fetcher和ruleManager创建Runner
-	return NewRunner(fetcher, ruleManager, options)
 }
 
 // New 使用功能选项模式创建Runner实例
@@ -176,42 +142,6 @@ func (r *Runner) Close() error {
 		return fmt.Errorf("close outputs failed: %s", strings.Join(errs, "; "))
 	}
 	return nil
-}
-
-// NewRunnerCompat 向后兼容的NewRunner函数，用于支持现有代码。
-//
-// Deprecated: use NewRunner and handle the returned error.
-func NewRunnerCompat(fetcher *fetch.Fetcher, ruleManager *rule.Manager) *Runner {
-	// 使用默认选项创建Runner
-	runner, err := NewRunner(fetcher, ruleManager, nil)
-	if err != nil {
-		// 在兼容模式下，如果出错，记录日志并返回一个空的Runner
-		gologger.Warning().Msgf("创建Runner失败: %v", err)
-		return &Runner{
-			fetcher:     fetcher,
-			ruleManager: ruleManager,
-			options:     defaultOptions(),
-			outputs:     []io.Writer{},
-			closers:     []io.Closer{},
-		}
-	}
-	return runner
-}
-
-// NewDefaultRunner 创建默认的Runner实例。
-//
-// Deprecated: use NewRunner with explicit dependencies.
-func NewDefaultRunner(options *fetch.Options, finger *rule.Finger) *Runner {
-	fetcher := fetch.NewFetcher(options)
-	var ruleManager *rule.Manager
-	if finger == nil {
-		ruleManager = rule.GetRuleManager()
-	}
-
-	return &Runner{
-		fetcher:     fetcher,
-		ruleManager: ruleManager,
-	}
 }
 
 // Scan 扫描URL
