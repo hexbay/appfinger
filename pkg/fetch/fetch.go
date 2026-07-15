@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 )
 
 // Fetcher 定义HTTP探测和Banner采集的核心结构。
@@ -32,11 +33,9 @@ func NewFetcher(options *Options) *Fetcher {
 // initClient 初始化HTTP客户端
 func (c *Fetcher) initClient() {
 	c.clientInitMu.Do(func() {
-		opts := retryablehttp.DefaultOptionsSpraying
-		opts.Timeout = 0
-		opts.KillIdleConn = false
-		opts.RetryMax = c.options.RetryMax
 		transport := retryablehttp.DefaultReusePooledTransport()
+		// 使用标准 Dialer 让连接建立阶段受 request ctx 取消/超时控制，
+		// 避免 fastdialer 默认拨号超时覆盖 Options.Timeout。
 		transport.DialContext = (&net.Dialer{}).DialContext
 		if c.options.Proxy != "" {
 			proxyURL, proxyErr := url.Parse(c.options.Proxy)
@@ -44,7 +43,20 @@ func (c *Fetcher) initClient() {
 				return proxyURL, proxyErr
 			}
 		}
-		opts.HttpClient = &http.Client{Transport: transport}
+		opts := retryablehttp.Options{
+			RetryWaitMin:  1 * time.Second,
+			RetryWaitMax:  30 * time.Second,
+			RetryMax:      c.options.RetryMax,
+			RespReadLimit: 4096,
+			// 请求超时由 RequestOnce/readICON 根据调用方 ctx 和 Options.Timeout 控制，
+			// 避免 retryablehttp 的 client-level timeout 抢先截断外部传入的 deadline。
+			Timeout: 0,
+			// 这里使用可复用连接池，不能沿用 host spraying 场景的 idle 连接关闭策略。
+			KillIdleConn: false,
+			// client-level timeout 已关闭，禁用 retryablehttp 的自动 timeout 调整逻辑。
+			NoAdjustTimeout: true,
+			HttpClient:      &http.Client{Transport: transport},
+		}
 		c.httpClient = retryablehttp.NewClient(opts)
 	})
 }
