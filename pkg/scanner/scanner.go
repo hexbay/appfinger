@@ -18,7 +18,12 @@ import (
 type Result struct {
 	Target     string
 	Banner     *fetch.Banner
-	Components map[string]map[string]string
+	Components []Component
+}
+
+type Component struct {
+	Name   string            `json:"name"`
+	Values map[string]string `json:"values,omitempty"`
 }
 
 type Config struct {
@@ -62,7 +67,7 @@ func (s *Scanner) Scan(ctx context.Context, target string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Target: target, Banner: last, Components: components}, nil
+	return &Result{Target: target, Banner: last, Components: componentsList(components)}, nil
 }
 
 func (s *Scanner) collect(ctx context.Context, target string) ([]*fetch.Banner, error) {
@@ -163,6 +168,14 @@ func merge(a, b map[string]map[string]string) map[string]map[string]string {
 		a[k] = v
 	}
 	return a
+}
+
+func componentsList(values map[string]map[string]string) []Component {
+	result := make([]Component, 0, len(values))
+	for name, fields := range values {
+		result = append(result, Component{Name: name, Values: fields})
+	}
+	return result
 }
 
 func joinURL(base, suffix string) string {

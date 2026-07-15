@@ -45,8 +45,8 @@ func (r *Reporter) Write(target string, result *scanner.Result, err error) {
 	}
 	if r.json {
 		_ = json.NewEncoder(r.writer).Encode(struct {
-			URL        string                       `json:"url"`
-			Components map[string]map[string]string `json:"components,omitempty"`
+			URL        string              `json:"url"`
+			Components []scanner.Component `json:"components,omitempty"`
 		}{target, result.Components})
 		return
 	}
