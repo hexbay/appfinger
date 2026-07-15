@@ -96,7 +96,7 @@ func (m *Manager) FindRuleByName(name string) *Rule {
 
 	// 查找指定名称的规则
 	if rules, ok := m.ruleSet.Rules[name]; ok && len(rules) > 0 {
-		return rules[0] // 返回第一个匹配的规则
+		return rules[0].Source // 返回第一个匹配的规则
 	}
 
 	return nil

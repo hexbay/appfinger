@@ -31,9 +31,14 @@ type Rule struct {
 	Cpe      map[string]interface{} `yaml:"cpe" json:"cpe,omitempty"`
 }
 
+// CompiledRule is the runtime representation of a YAML Rule.
+// The source Rule is retained for metadata and extraction, while the rule
+// set owns only compiled runtime entries.
+type CompiledRule struct{ Source *Rule }
+
 // Finger 根据协议分组
 type RuleSet struct {
-	Rules map[string][]*Rule `yaml:"rules"`
+	Rules map[string][]*CompiledRule `yaml:"-"`
 }
 
 func (f RuleSet) AddRules(rules []*Rule) {
@@ -41,7 +46,7 @@ func (f RuleSet) AddRules(rules []*Rule) {
 		if rule.Service == "" {
 			rule.Service = "http"
 		}
-		f.Rules[rule.Service] = append(f.Rules[rule.Service], rule)
+		f.Rules[rule.Service] = append(f.Rules[rule.Service], &CompiledRule{Source: rule})
 	}
 }
 
@@ -54,7 +59,8 @@ func (f RuleSet) Match(service string, getMatchPart MatchPartGetter) []*MatchRes
 		return results
 	}
 	// 对每个规则进行匹配
-	for _, rule := range rules {
+	for _, compiled := range rules {
+		rule := compiled.Source
 		ok, extract := rule.Match(getMatchPart)
 		if ok {
 			results = append(results, &MatchResult{
@@ -67,7 +73,7 @@ func (f RuleSet) Match(service string, getMatchPart MatchPartGetter) []*MatchRes
 }
 
 func NewRuleSet() *RuleSet {
-	return &RuleSet{Rules: make(map[string][]*Rule)}
+	return &RuleSet{Rules: make(map[string][]*CompiledRule)}
 }
 
 func (r *Rule) Match(getMatchPart MatchPartGetter) (bool, map[string]string) {
