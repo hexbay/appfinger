@@ -34,7 +34,10 @@ type Rule struct {
 // CompiledRule is the runtime representation of a YAML Rule.
 // The source Rule is retained for metadata and extraction, while the rule
 // set owns only compiled runtime entries.
-type CompiledRule struct{ Source *Rule }
+type CompiledRule struct {
+	Source  *Rule
+	Runtime *Rule
+}
 
 // Finger 根据协议分组
 type RuleSet struct {
@@ -46,7 +49,11 @@ func (f RuleSet) AddRules(rules []*Rule) {
 		if rule.Service == "" {
 			rule.Service = "http"
 		}
-		f.Rules[rule.Service] = append(f.Rules[rule.Service], &CompiledRule{Source: rule})
+		runtime := cloneRule(rule)
+		for _, matcher := range runtime.Matchers {
+			_ = matcher.CompileMatchers()
+		}
+		f.Rules[rule.Service] = append(f.Rules[rule.Service], &CompiledRule{Source: rule, Runtime: runtime})
 	}
 }
 
@@ -60,7 +67,7 @@ func (f RuleSet) Match(service string, getMatchPart MatchPartGetter) []*MatchRes
 	}
 	// 对每个规则进行匹配
 	for _, compiled := range rules {
-		rule := compiled.Source
+		rule := compiled.Runtime
 		ok, extract := rule.Match(getMatchPart)
 		if ok {
 			results = append(results, &MatchResult{
@@ -70,6 +77,37 @@ func (f RuleSet) Match(service string, getMatchPart MatchPartGetter) []*MatchRes
 		}
 	}
 	return results
+}
+
+func cloneRule(source *Rule) *Rule {
+	clone := *source
+	clone.Require = append([]string(nil), source.Require...)
+	clone.Matchers = make([]*matchers.Matcher, 0, len(source.Matchers))
+	for _, sourceMatcher := range source.Matchers {
+		if sourceMatcher == nil {
+			clone.Matchers = append(clone.Matchers, nil)
+			continue
+		}
+		matcher := *sourceMatcher
+		matcher.Words = append([]string(nil), sourceMatcher.Words...)
+		matcher.Regex = append([]string(nil), sourceMatcher.Regex...)
+		matcher.Status = append([]int(nil), sourceMatcher.Status...)
+		if sourceMatcher.Cpe != nil {
+			matcher.Cpe = make(map[string]string, len(sourceMatcher.Cpe))
+			for k, v := range sourceMatcher.Cpe {
+				matcher.Cpe[k] = v
+			}
+		}
+		clone.Matchers = append(clone.Matchers, &matcher)
+	}
+	if source.Cpe != nil {
+		clone.Cpe = make(map[string]interface{}, len(source.Cpe))
+		for k, v := range source.Cpe {
+			clone.Cpe[k] = v
+		}
+	}
+	clone.Plugins = append([]*Plugin(nil), source.Plugins...)
+	return &clone
 }
 
 func NewRuleSet() *RuleSet {
