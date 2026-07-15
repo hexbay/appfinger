@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/hexbay/appfinger/pkg/detectors/wordpress"
 	"github.com/hexbay/appfinger/pkg/fetch"
@@ -19,11 +21,14 @@ type Result struct {
 	Target     string
 	Banner     *fetch.Banner
 	Components []Component
+	Duration   time.Duration `json:"duration"`
 }
 
 type Component struct {
 	Name   string            `json:"name"`
 	Values map[string]string `json:"values,omitempty"`
+	Rule   string            `json:"rule,omitempty"`
+	URL    string            `json:"url,omitempty"`
 }
 
 type Config struct {
@@ -47,6 +52,7 @@ func New(config Config) (*Scanner, error) {
 }
 
 func (s *Scanner) Scan(ctx context.Context, target string) (*Result, error) {
+	started := time.Now()
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -67,7 +73,7 @@ func (s *Scanner) Scan(ctx context.Context, target string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Target: target, Banner: last, Components: componentsList(components)}, nil
+	return &Result{Target: target, Banner: last, Components: componentsList(components), Duration: time.Since(started)}, nil
 }
 
 func (s *Scanner) collect(ctx context.Context, target string) ([]*fetch.Banner, error) {
@@ -175,6 +181,7 @@ func componentsList(values map[string]map[string]string) []Component {
 	for name, fields := range values {
 		result = append(result, Component{Name: name, Values: fields})
 	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
 	return result
 }
 
