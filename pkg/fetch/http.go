@@ -243,6 +243,39 @@ func isRedirectStatus(statusCode int) bool {
 	}
 }
 
+func prepareHTTPRequest(req *retryablehttp.Request) {
+	// 手动设置host，部分网站因为http 携带80 端口会被拦截 比如baidu.com
+	req.Host = getHttpHostname(req.URL.String())
+	req.Header.Set("accept-language", "zh-CN,zh;q=0.9")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.58")
+}
+
+func debugHTTPRequest(req *retryablehttp.Request) {
+	requestDump, err := httputil.DumpRequestOut(req.Request, false)
+	if err != nil {
+		gologger.Debug().Msgf("dump request failed for %s: %v", req.URL.String(), err)
+		return
+	}
+	gologger.Debug().Msgf("Request Dump:\n%s", strings.TrimRight(string(requestDump), "\r\n"))
+}
+
+func readHTTPResponse(resp *http.Response, maxBodySize int64) (headers []byte, body []byte, bodyString string, response string) {
+	headers, _ = httputil.DumpResponse(resp, false)
+	body, _ = io.ReadAll(io.LimitReader(resp.Body, maxBodySize))
+	label := ExtractContentTypeCharset(resp.Header.Get("Content-Type"))
+	if label == "" {
+		label = ExtractCharset(body)
+	}
+	bodyString = ResponseDecoding(body, label)
+	response = string(headers) + bodyString
+	return headers, body, bodyString, response
+}
+
+func debugHTTPResponse(response string) {
+	gologger.Debug().Msgf("Response Dump:\n%s", strings.TrimRight(response, "\r\n"))
+}
+
 func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, options ...*Options) (banner *Banner, redirectURL string, err error) {
 	requestOptions := DefaultOption()
 	if len(options) > 0 && options[0] != nil {
@@ -256,6 +289,10 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 	if maxBodySize <= 0 {
 		maxBodySize = DefaultMaxBodySize
 	}
+	maxJavaScriptRedirectBodySize := requestOptions.MaxJavaScriptRedirectBodySize
+	if maxJavaScriptRedirectBodySize <= 0 {
+		maxJavaScriptRedirectBodySize = DefaultMaxJavaScriptRedirectBodySize
+	}
 	// 开始请求数据
 	var resp *http.Response
 	req, err := retryablehttp.NewRequest("GET", uri, nil)
@@ -263,13 +300,13 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 		return banner, redirectURL, fmt.Errorf("%w: %v", ErrInvalidURL, err)
 	}
 	req = req.WithContext(ctx)
-	// 手动设置host，部分网站因为http 携带80 端口会被拦截 比如baidu.com
-	req.Host = getHttpHostname(uri)
-	req.Header.Set("accept-language", "zh-CN,zh;q=0.9")
-	req.Header.Set("Accept", "*/*")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.58")
+	prepareHTTPRequest(req)
 	maxRedirect := 6
+	redirectHops := make([]RedirectHop, 0, maxRedirect)
 	for i := 0; i < maxRedirect; i++ {
+		if requestOptions.DebugReq {
+			debugHTTPRequest(req)
+		}
 		var r2 *http.Response
 		r2, err = client.Do(req)
 		if err != nil {
@@ -290,16 +327,32 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 			if !newURL.IsAbs() {
 				newURL = resp.Request.URL.ResolveReference(newURL)
 			}
-			_, _ = io.Copy(io.Discard, resp.Body)
+			hop := RedirectHop{
+				From:       resp.Request.URL.String(),
+				To:         newURL.String(),
+				StatusCode: resp.StatusCode,
+			}
+			redirectHops = append(redirectHops, hop)
+			if requestOptions.DebugResp {
+				gologger.Debug().Msgf("redirect %s [%d] -> %s", hop.From, hop.StatusCode, hop.To)
+				_, _, _, redirectResponse := readHTTPResponse(resp, maxBodySize)
+				debugHTTPResponse(redirectResponse)
+			} else {
+				_, _ = io.Copy(io.Discard, resp.Body)
+			}
 			_ = resp.Body.Close()
 			req, _ = retryablehttp.NewRequest("GET", newURL.String(), nil)
 			req = req.WithContext(ctx)
+			prepareHTTPRequest(req)
 			continue
 		} else {
 			break
 		}
 	}
-	if err != nil && err.Error() != http.ErrUseLastResponse.Error() && resp == nil {
+	if err != nil && err.Error() != http.ErrUseLastResponse.Error() {
+		if len(redirectHops) > 0 {
+			return banner, redirectURL, &RedirectError{Hops: redirectHops, Err: err}
+		}
 		return banner, redirectURL, err
 	}
 	if resp == nil {
@@ -308,15 +361,14 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 	defer func() {
 		_ = resp.Body.Close()
 	}()
-	// get raw headers
-	headers, _ := httputil.DumpResponse(resp, false)
-	// get body
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxBodySize))
+	headers, body, bodyString, response := readHTTPResponse(resp, maxBodySize)
 	label := ExtractContentTypeCharset(resp.Header.Get("Content-Type"))
 	if label == "" {
 		label = ExtractCharset(body)
 	}
-	bodyString := ResponseDecoding(body, label)
+	if requestOptions.DebugResp {
+		debugHTTPResponse(response)
+	}
 
 	banner = &Banner{
 		Uri:        resp.Request.URL.String(),
@@ -324,7 +376,7 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 		BodyHash:   mmh3(body),
 		Header:     string(headers),
 		StatusCode: resp.StatusCode,
-		Response:   string(headers) + bodyString,
+		Response:   response,
 		Headers:    map[string]string{},
 		Charset:    label,
 	}
@@ -337,7 +389,7 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 		banner.Certificate = parseCertificateInfo(resp.TLS)
 		banner.Cert = resp.TLS
 	}
-	if !requestOptions.DisableJavaScript {
+	if !requestOptions.DisableJavaScript && int64(len(body)) <= maxJavaScriptRedirectBodySize {
 		//解析JavaScript跳转
 		jsRedirectUri := parseJavaScript(uri, string(body))
 		if jsRedirectUri != "" {

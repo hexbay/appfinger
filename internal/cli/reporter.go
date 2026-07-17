@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/hexbay/appfinger/pkg/scanner"
 )
@@ -51,7 +54,63 @@ func (r *Reporter) Write(target string, result *scanner.Result, err error) {
 		}{target, result.Components, result.Duration.Nanoseconds()})
 		return
 	}
-	_, _ = fmt.Fprintf(r.writer, "%s\t%v\n", target, result.Components)
+	_, _ = fmt.Fprintln(r.writer, formatTextResult(target, result))
+}
+
+func formatTextResult(target string, result *scanner.Result) string {
+	if result == nil {
+		return fmt.Sprintf("[unknown] %s", target)
+	}
+	status := "-"
+	title := "-"
+	finalURL := target
+	if result.Banner != nil {
+		if result.Banner.StatusCode > 0 {
+			status = fmt.Sprint(result.Banner.StatusCode)
+		}
+		if result.Banner.Title != "" {
+			title = result.Banner.Title
+		}
+		if result.Banner.Uri != "" {
+			finalURL = result.Banner.Uri
+		}
+	}
+	components := formatComponents(result.Components)
+	if components == "" {
+		components = "-"
+	}
+	return fmt.Sprintf("[FOUND] %s | final=%s | status=%s | title=%q | tech=%s | time=%s",
+		target,
+		finalURL,
+		status,
+		title,
+		components,
+		result.Duration.Round(time.Millisecond),
+	)
+}
+
+func formatComponents(components []scanner.Component) string {
+	if len(components) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(components))
+	for _, component := range components {
+		if len(component.Values) == 0 {
+			parts = append(parts, component.Name)
+			continue
+		}
+		keys := make([]string, 0, len(component.Values))
+		for key := range component.Values {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		values := make([]string, 0, len(keys))
+		for _, key := range keys {
+			values = append(values, fmt.Sprintf("%s=%s", key, component.Values[key]))
+		}
+		parts = append(parts, fmt.Sprintf("%s(%s)", component.Name, strings.Join(values, ", ")))
+	}
+	return strings.Join(parts, ", ")
 }
 func (r *Reporter) Close() error {
 	if r.file != nil {

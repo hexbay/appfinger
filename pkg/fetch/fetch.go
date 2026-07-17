@@ -70,14 +70,15 @@ func normalizeOptions(options *Options) (*Options, error) {
 
 func buildHTTPClient(options *Options) (*http.Client, error) {
 	if options.HTTPClient != nil {
-		return options.HTTPClient, nil
+		return disableAutoRedirect(options.HTTPClient), nil
 	}
 	if options.Transport != nil {
-		return &http.Client{Transport: options.Transport}, nil
+		return disableAutoRedirect(&http.Client{Transport: options.Transport}), nil
 	}
 	transport := retryablehttp.DefaultReusePooledTransport()
 	transport.DialContext = (&net.Dialer{}).DialContext
 	transport.DialTLSContext = nil
+	transport.MaxResponseHeaderBytes = DefaultMaxResponseHeaderBytes
 	if options.Timeout > 0 {
 		transport.TLSHandshakeTimeout = options.Timeout
 	}
@@ -88,7 +89,17 @@ func buildHTTPClient(options *Options) (*http.Client, error) {
 		}
 		transport.Proxy = http.ProxyURL(proxyURL)
 	}
-	return &http.Client{Transport: transport}, nil
+	return disableAutoRedirect(&http.Client{Transport: transport}), nil
+}
+
+func disableAutoRedirect(client *http.Client) *http.Client {
+	result := *client
+	if result.CheckRedirect == nil {
+		result.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+	}
+	return &result
 }
 
 // GetBanners 实现BannerProvider接口
@@ -108,9 +119,6 @@ RedirectLoop:
 			if err != nil {
 				gologger.Debug().Msgf("Req Error:%v", err)
 				break RedirectLoop
-			}
-			if c.options.DebugResp {
-				gologger.Debug().Msgf("response captured for %s", banner.Uri)
 			}
 			// 如果nextURI为空，则不再继续请求
 			if nextURI == "" {
