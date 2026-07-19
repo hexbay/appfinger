@@ -341,7 +341,13 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 				_, _ = io.Copy(io.Discard, resp.Body)
 			}
 			_ = resp.Body.Close()
-			req, _ = retryablehttp.NewRequest("GET", newURL.String(), nil)
+			req, err = retryablehttp.NewRequest("GET", newURL.String(), nil)
+			if err != nil {
+				if requestOptions.DebugResp {
+					gologger.Debug().Msgf("redirect request build failed %s [%d] -> %s: %v", hop.From, hop.StatusCode, hop.To, err)
+				}
+				break
+			}
 			req = req.WithContext(ctx)
 			prepareHTTPRequest(req)
 			continue

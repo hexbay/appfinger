@@ -68,6 +68,30 @@ func TestRequestOncePreservesRedirectContextOnLaterFailure(t *testing.T) {
 	assert.Contains(t, err.Error(), "http://example.test/ [302] -> http://example.test/final")
 }
 
+func TestRequestOnceReturnsErrorForMalformedRedirectRequest(t *testing.T) {
+	client := retryablehttp.NewClient(retryablehttp.Options{
+		RetryMax: 0,
+		HttpClient: disableAutoRedirect(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusFound,
+				Status:     "302 Found",
+				Header:     http.Header{"Location": []string{"http://[fe80::1%25en0]/final"}},
+				Body:       io.NopCloser(strings.NewReader("")),
+				Request:    req,
+			}, nil
+		})}),
+	})
+
+	_, _, err := requestOnce(context.Background(), client, "http://example.test/", DefaultOption())
+	require.Error(t, err)
+
+	var redirectErr *RedirectError
+	require.ErrorAs(t, err, &redirectErr)
+	require.Len(t, redirectErr.Hops, 1)
+	assert.Equal(t, "http://example.test/", redirectErr.Hops[0].From)
+	assert.Equal(t, "http://[fe80::1%25en0]/final", redirectErr.Hops[0].To)
+}
+
 func TestFetcherAllowsLargeResponseHeaders(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Large-Header", strings.Repeat("a", 8192))
