@@ -49,9 +49,10 @@ func (r *Reporter) Write(target string, result *scanner.Result, err error) {
 	if r.json {
 		_ = json.NewEncoder(r.writer).Encode(struct {
 			URL        string              `json:"url"`
+			IconHash   int32               `json:"icon_hash,omitempty"`
 			Components []scanner.Component `json:"components,omitempty"`
 			Duration   int64               `json:"duration_ns"`
-		}{target, result.Components, result.Duration.Nanoseconds()})
+		}{target, resultIconHash(result), result.Components, result.Duration.Nanoseconds()})
 		return
 	}
 	_, _ = fmt.Fprintln(r.writer, formatTextResult(target, result))
@@ -64,6 +65,7 @@ func formatTextResult(target string, result *scanner.Result) string {
 	status := "-"
 	title := "-"
 	finalURL := target
+	iconHash := "-"
 	if result.Banner != nil {
 		if result.Banner.StatusCode > 0 {
 			status = fmt.Sprint(result.Banner.StatusCode)
@@ -74,19 +76,30 @@ func formatTextResult(target string, result *scanner.Result) string {
 		if result.Banner.Uri != "" {
 			finalURL = result.Banner.Uri
 		}
+		if result.Banner.IconHash != 0 {
+			iconHash = fmt.Sprint(result.Banner.IconHash)
+		}
 	}
 	components := formatComponents(result.Components)
 	if components == "" {
 		components = "-"
 	}
-	return fmt.Sprintf("[FOUND] %s | final=%s | status=%s | title=%q | tech=%s | time=%s",
+	return fmt.Sprintf("[FOUND] %s | final=%s | status=%s | title=%q | icon_hash=%s | tech=%s | time=%s",
 		target,
 		finalURL,
 		status,
 		title,
+		iconHash,
 		components,
 		result.Duration.Round(time.Millisecond),
 	)
+}
+
+func resultIconHash(result *scanner.Result) int32 {
+	if result == nil || result.Banner == nil {
+		return 0
+	}
+	return result.Banner.IconHash
 }
 
 func formatComponents(components []scanner.Component) string {

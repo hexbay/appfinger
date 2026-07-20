@@ -16,6 +16,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -319,13 +320,9 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 				break
 			}
 			var newURL *url.URL
-			newURL, err = url.Parse(location)
+			newURL, err = resolveRedirectURL(resp.Request.URL, location)
 			if err != nil {
 				break
-			}
-			// 如果 location 是相对路径，将其转换为绝对路径
-			if !newURL.IsAbs() {
-				newURL = resp.Request.URL.ResolveReference(newURL)
 			}
 			hop := RedirectHop{
 				From:       resp.Request.URL.String(),
@@ -411,6 +408,24 @@ func requestOnce(ctx context.Context, client *retryablehttp.Client, uri string, 
 		}
 	}
 	return banner, "", nil
+}
+
+func resolveRedirectURL(base *url.URL, location string) (*url.URL, error) {
+	redirectURL, err := url.Parse(location)
+	if err != nil {
+		return nil, err
+	}
+	if !redirectURL.IsAbs() {
+		return base.ResolveReference(redirectURL), nil
+	}
+	if base != nil &&
+		base.Port() != "" &&
+		redirectURL.Port() == "" &&
+		strings.EqualFold(base.Scheme, redirectURL.Scheme) &&
+		strings.EqualFold(base.Hostname(), redirectURL.Hostname()) {
+		redirectURL.Host = net.JoinHostPort(redirectURL.Hostname(), base.Port())
+	}
+	return redirectURL, nil
 }
 
 func contextWithOptionsTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {

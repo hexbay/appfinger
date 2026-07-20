@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -90,6 +91,36 @@ func TestRequestOnceReturnsErrorForMalformedRedirectRequest(t *testing.T) {
 	require.Len(t, redirectErr.Hops, 1)
 	assert.Equal(t, "http://example.test/", redirectErr.Hops[0].From)
 	assert.Equal(t, "http://[fe80::1%25en0]/final", redirectErr.Hops[0].To)
+}
+
+func TestResolveRedirectURLPreservesSourcePortForSameHostAbsoluteLocation(t *testing.T) {
+	base, err := url.Parse("http://example.test:3001/")
+	require.NoError(t, err)
+
+	redirectURL, err := resolveRedirectURL(base, "http://example.test/auth/login?next=http%3A%2F%2Fexample.test%2F")
+	require.NoError(t, err)
+
+	assert.Equal(t, "http://example.test:3001/auth/login?next=http%3A%2F%2Fexample.test%2F", redirectURL.String())
+}
+
+func TestResolveRedirectURLKeepsExplicitRedirectPort(t *testing.T) {
+	base, err := url.Parse("http://example.test:3001/")
+	require.NoError(t, err)
+
+	redirectURL, err := resolveRedirectURL(base, "http://example.test:8080/auth/login")
+	require.NoError(t, err)
+
+	assert.Equal(t, "http://example.test:8080/auth/login", redirectURL.String())
+}
+
+func TestResolveRedirectURLDoesNotPreservePortForDifferentHost(t *testing.T) {
+	base, err := url.Parse("http://example.test:3001/")
+	require.NoError(t, err)
+
+	redirectURL, err := resolveRedirectURL(base, "http://other.test/auth/login")
+	require.NoError(t, err)
+
+	assert.Equal(t, "http://other.test/auth/login", redirectURL.String())
 }
 
 func TestFetcherAllowsLargeResponseHeaders(t *testing.T) {
