@@ -98,6 +98,7 @@ func isHiddenDir(info os.FileInfo) bool {
 //   - "icon_hash"
 //   - "body_hash"
 //   - "server"
+//   - "port"
 //   - "headers.<header-name>" (e.g. headers.server, headers.content-type)
 func isValidMatcherPart(part string) bool {
 	if part == "" || part == "body" {
@@ -107,7 +108,7 @@ func isValidMatcherPart(part string) bool {
 		return true
 	}
 	switch part {
-	case "url", "header", "cert", "title", "response", "icon_hash", "body_hash", "server":
+	case "url", "header", "cert", "title", "response", "icon_hash", "body_hash", "server", "port":
 		return true
 	}
 	return false

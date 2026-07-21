@@ -136,10 +136,12 @@ func matchBanners(finger *rule.RuleSet, banners []*fetch.Banner) (map[string]map
 }
 
 func matchPart(b *fetch.Banner) rule.MatchPartGetter {
+	port := bannerPort(b.Uri)
 	lower := map[string]string{
 		"body": strings.ToLower(b.Body), "header": strings.ToLower(b.Header),
 		"title": strings.ToLower(b.Title), "response": strings.ToLower(b.Response),
 		"cert": strings.ToLower(b.Certificate), "server": strings.ToLower(b.Headers["server"]),
+		"port": port,
 	}
 	for k, v := range b.Headers {
 		lower[strings.ToLower(k)] = strings.ToLower(v)
@@ -169,6 +171,8 @@ func matchPart(b *fetch.Banner) rule.MatchPartGetter {
 			return b.Certificate
 		case "server":
 			return b.Headers["server"]
+		case "port":
+			return port
 		case "icon_hash":
 			return fmt.Sprint(b.IconHash)
 		case "body_hash":
@@ -176,6 +180,23 @@ func matchPart(b *fetch.Banner) rule.MatchPartGetter {
 		}
 		return ""
 	}
+}
+
+func bannerPort(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	if port := u.Port(); port != "" {
+		return port
+	}
+	switch u.Scheme {
+	case "http":
+		return "80"
+	case "https":
+		return "443"
+	}
+	return ""
 }
 
 func merge(a, b map[string]map[string]string) map[string]map[string]string {

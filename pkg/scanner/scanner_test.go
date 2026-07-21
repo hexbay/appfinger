@@ -69,3 +69,24 @@ func TestScannerUsesLatestRulesSnapshotAfterReload(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "AfterReload", lastKnownGood.Components[0].Name)
 }
+
+func TestScannerRuleCanMatchPort(t *testing.T) {
+	rulesDir := t.TempDir()
+	ruleFile := []byte("- name: DemoPort\n  service: http\n  matchers:\n    - type: word\n      words: [8080]\n      part: port\n")
+	require.NoError(t, os.WriteFile(rulesDir+"/demo.yaml", ruleFile, 0644))
+	manager, err := rule.NewManager(rulesDir)
+	require.NoError(t, err)
+
+	fetcher, err := fetch.NewFetcher(fetch.DefaultOption())
+	require.NoError(t, err)
+	s, err := New(Config{Fetcher: fetcher, RuleProvider: manager})
+	require.NoError(t, err)
+
+	components, _ := matchBanners(s.ruleProvider.Snapshot(), []*fetch.Banner{{Uri: "http://127.0.0.1:8080"}})
+	require.Contains(t, components, "DemoPort")
+}
+
+func TestMatchPartReturnsDefaultPort(t *testing.T) {
+	require.Equal(t, "80", matchPart(&fetch.Banner{Uri: "http://example.com"})("port", false))
+	require.Equal(t, "443", matchPart(&fetch.Banner{Uri: "https://example.com"})("port", false))
+}
